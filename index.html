@@ -658,6 +658,21 @@ body.mobile .tab.on::before{content:'';position:absolute;top:0;left:26%;right:26
 .age.g{background:#DDF3E6;color:var(--pos)}.age.a{background:#FFF1D6;color:#8A5A00}.age.r{background:#F6E0E0;color:var(--neg)}
 body.mobile .tab svg{padding:4px 5px}body.mobile .tab span{white-space:nowrap}
 .pwwrap{position:relative;display:block;width:100%}.pwwrap>.in{width:100%;box-sizing:border-box;padding-right:46px}.pwwrap .eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);width:38px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;padding:0}.pwwrap .eye:hover{color:var(--navy)}
+#backbar{display:none}
+body.mobile #backbar.on{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:6;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:6px 8px;margin:0 -12px 14px}
+body.mobile #backbar .bk{display:flex;align-items:center;gap:2px;border:0;background:none;color:#0A6CFF;font-size:16px;font-weight:600;padding:8px 6px;cursor:pointer;font-family:inherit;min-width:64px}
+body.mobile #backbar .bk svg{width:22px;height:22px}
+body.mobile #backbar .bt{font-weight:800;color:var(--navy);font-size:15.5px;letter-spacing:.2px}
+body.mobile .hub{min-height:calc(100vh - 290px);display:flex;flex-direction:column;justify-content:center;padding:6px 4px 20px}
+body.mobile .hubtitle{font-size:24px;font-weight:800;color:var(--navy);text-align:center;letter-spacing:.3px}
+body.mobile .hubsub{font-size:13px;color:var(--muted);text-align:center;margin:4px 0 30px}
+body.mobile .icogrid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px 10px;justify-items:center}
+body.mobile .ai{display:flex;flex-direction:column;align-items:center;gap:9px;border:0;background:none;cursor:pointer;font-family:inherit;padding:0;width:100%;-webkit-tap-highlight-color:transparent}
+body.mobile .aic{position:relative;width:72px;height:72px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 8px 18px rgba(11,37,69,.22),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .12s}
+body.mobile .ai:active .aic{transform:scale(.92)}
+body.mobile .aic svg{width:36px;height:36px;stroke-width:1.9}
+body.mobile .aib{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;border-radius:11px;background:#E5322D;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid #fff;box-sizing:border-box}
+body.mobile .ail{font-size:12.5px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2}
 </style>
 </head>
 <body>
@@ -681,7 +696,8 @@ body.mobile .tab svg{padding:4px 5px}body.mobile .tab span{white-space:nowrap}
     <div class="ub-actions"><button id="installBtn" class="hide" style="background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:800" onclick="installApp()">⬇ Install<span class="ins-l"> App</span></button><span id="modePill"></span><button onclick="refresh()">⟳</button><button onclick="logout()">Switch</button></div>
   </div>
   <nav class="tabs hide" id="tabs"></nav>
-  <main id="view"></main>
+  <div id="backbar"></div>
+<main id="view"></main>
   <div class="foot">Sani Steels Pvt Ltd · Guwahati · Confidential<div class="credit">App designed by Ankit</div></div>
 </div>
 <div id="printArea"></div>
@@ -1064,8 +1080,38 @@ function normalizeDB(r){
 /* ================= LAYOUT ================= */
 function applyView(){ const v=document.documentElement.dataset.view; const m = v==='mobile' || (v!=='desktop' && innerWidth<760); document.body.classList.toggle('mobile', m); }
 addEventListener('resize', ()=>{ const was=document.body.classList.contains('mobile'); applyView(); if(was!==document.body.classList.contains('mobile')) render(); });
+
+/* ===== Mobile grouped navigation (iPhone-style launcher) ===== */
+ICON.transfer='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13"/><path d="m16 3 4 4-4 4"/><path d="M17 17H4"/><path d="m8 13-4 4 4 4"/></svg>';
+ICON.more='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>';
+const GROUPS=[['orders','Orders','Stock & Orders','stock',['stock','newpo','pos']],['wh','Warehouse','Warehouse','grn',['grn','sale','transfer']],['more','More','Claims & Reports','more',['claims','report']],['admin','Admin','Admin','admin',['admin']]];
+const TICON={stock:'stock',newpo:'po',pos:'list',grn:'grn',sale:'sale',transfer:'transfer',claims:'claim',report:'report',admin:'admin'};
+const TCOL={stock:['#2E6BE6','#6BA4FF'],newpo:['#C9A227','#EFCB62'],pos:['#0B2545','#3A5A86'],grn:['#1E9E5A','#55D08F'],sale:['#E8772E','#FFAA66'],transfer:['#0E9AA7','#4FCBD6'],claims:['#D64545','#FF8383'],report:['#7A4BD6','#B093FF'],admin:['#4A5568','#8E9BB0']};
+const TLBL={stock:'Stock',newpo:'New PO',pos:'PO List',grn:'GRN / Inward',sale:'Sale',transfer:'Transfer',claims:'Claims',report:'Report',admin:'Admin'};
+const isMob=()=>document.body.classList.contains('mobile');
+function grpOf(t){ const g=GROUPS.find(g=>g[4].includes(t)); return g?g[0]:null; }
+function accTabs(g){ return g[4].filter(t=>canTab(t)); }
+function tabBadge(t){ return t==='pos'?(canApprove()?pendCount():0):t==='report'?oldLying():t==='claims'?S.db.claims.filter(c=>c.status!=='Received').length:0; }
+S.hp=0;
+function navPush(){ try{ history.pushState({sw:1},''); S.hp++; }catch(e){} }
+addEventListener('popstate',()=>{ if(!S.user||!isMob()) return; S.hp=Math.max(0,S.hp-1); hubBack(); });
+function openGrp(id){ const g=GROUPS.find(x=>x[0]===id), t=accTabs(g); if(!t.length) return; if(t.length===1) return go(t[0]); S.hub=id; S.grp=id; navPush(); render(); scrollTo(0,0); }
+function hubBack(){ if(S.hub){ S.hub=null; S.tab='home'; } else { const g=GROUPS.find(x=>x[0]===S.grp); if(g&&accTabs(g).length>1) S.hub=g[0]; else S.tab='home'; } render(); scrollTo(0,0); }
+function backTap(){ if(S.hp>0) history.back(); else hubBack(); }
+function renderBack(){
+  const el=$('#backbar'); if(!el) return; const show=isMob()&&S.user&&(S.hub||S.tab!=='home');
+  el.className=show?'on':''; if(!show){ el.innerHTML=''; return; }
+  const g=S.hub?GROUPS.find(x=>x[0]===S.hub):null, prev=S.hub?'Home':((GROUPS.find(x=>x[0]===S.grp)&&accTabs(GROUPS.find(x=>x[0]===S.grp)).length>1)?GROUPS.find(x=>x[0]===S.grp)[2]:'Home');
+  el.innerHTML=`<button class="bk" onclick="backTap()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>${esc(prev)}</button><div class="bt">${esc(g?g[2]:(TLBL[S.tab]||''))}</div><div style="width:64px"></div>`;
+}
+function renderHub(){
+  const g=GROUPS.find(x=>x[0]===S.hub), tabs=accTabs(g);
+  $('#view').innerHTML=`<div class="hub"><div class="hubtitle">${esc(g[2])}</div><div class="hubsub">Tap an icon to open</div><div class="icogrid">${tabs.map(t=>{ const b=tabBadge(t); return `<button class="ai" onclick="go('${t}')"><span class="aic" style="background:linear-gradient(145deg,${TCOL[t][1]},${TCOL[t][0]})">${ICON[TICON[t]]}${b?`<span class="aib">${b}</span>`:''}</span><span class="ail">${esc(TLBL[t])}</span></button>`; }).join('')}</div></div>`;
+}
 const TABS = [['home','Home','home'],['stock','Stock','stock'],['newpo','New PO','po'],['pos','PO List','list'],['grn','GRN / Inward','grn'],['sale','Sale','sale'],['transfer','Transfer','grn'],['claims','Claims','claim'],['report','Report','report'],['admin','Admin','admin']];
 function renderTabs(){
+  if(isMob()){ const act=S.hub||(S.tab!=='home'?S.grp:null);
+    $('#tabs').innerHTML=`<button class="tab ${!S.hub&&S.tab==='home'?'on':''}" onclick="go('home')">${ICON.home}<span>Home</span></button>`+GROUPS.filter(g=>accTabs(g).length).map(g=>{ const b=accTabs(g).reduce((a,t)=>a+tabBadge(t),0); return `<button class="tab ${act===g[0]?'on':''}" onclick="openGrp('${g[0]}')">${ICON[g[3]]}<span>${g[1]}${b?` <span class="badge">${b}</span>`:''}</span></button>`; }).join(''); return; }
   $('#tabs').innerHTML = TABS.filter(t=>canTab(t[0])).map(t=>`<button class="tab ${S.tab===t[0]?'on':''}" onclick="go('${t[0]}')">${ICON[t[2]]}<span>${document.body.classList.contains('mobile')&&t[0]==='grn'?'GRN':t[1]}${t[0]==='pos'&&canApprove()&&pendCount()?` <span class="badge">${pendCount()}</span>`:''}${t[0]==='report'&&oldLying()?` <span class="badge">${oldLying()}</span>`:''}${t[0]==='claims'&&S.db.claims.some(c=>c.status!=='Received')?` <span class="badge">${S.db.claims.filter(c=>c.status!=='Received').length}</span>`:''}</span></button>`).join('');
 }
 function canApprove(){ return S.head || S.admin; }
@@ -1074,14 +1120,15 @@ function canTab(t){ if(S.admin) return true; const r=TAB_ROLES[t]; return r==='*
 const ROLE_LBL = {sales:'Salesperson',warehouse:'Warehouse team',head:'Team head'};
 function pendCount(){ return S.db.pos.filter(p=>p.status==='Pending').length; }
 function auth(){ return {by:S.user, pin:S.token, admin:adminPass()}; }
-function go(t){ S.tab=canTab(t)?t:'home'; render(); scrollTo(0,0); }
+function go(t){ S.hub=null; S.tab=canTab(t)?t:'home'; S.grp=grpOf(S.tab); if(isMob()&&S.tab!=='home') navPush(); render(); scrollTo(0,0); }
 function render(){
   if(!S.user){ return renderLogin(); }
   if(!canTab(S.tab)) S.tab='home';
   $('#userbar').classList.remove('hide'); $('#tabs').classList.remove('hide');
   $('#ubName').textContent=S.user; $('#ubAdmin').innerHTML = (S.head?'<span class="pill head">TEAM HEAD</span> ':'')+((S.role==='sales'||S.role==='warehouse')&&!S.admin?`<span class="pill">${esc(ROLE_LBL[S.role].toUpperCase())}</span> `:'')+(S.admin?'<span class="pill admin">ADMIN</span>':'')+(S.loginId?' <button class="btn ghost sm" style="padding:2px 8px" title="Change my password" onclick="pwModal()">🔑</button>':'');
   $('#modePill').innerHTML = API.live()?'<span class="pill live">● LIVE</span>':(document.body.classList.contains('mobile')?'<span class="pill demo">DEMO</span>':'<span class="pill demo">DEMO MODE</span>');
-  renderTabs();
+  renderTabs(); renderBack();
+  if(isMob()&&S.hub){ renderHub(); return; }
   ({home:vHome,stock:vStock,newpo:vNewPO,pos:vPOs,grn:vGRN,sale:vSale,transfer:vTransfer,claims:vClaims,report:vReport,admin:vAdmin})[S.tab]();
 }
 function sized(u,w){ return /scene7\.com\/is\/image\//.test(u) && !u.includes('?') ? u+'?wid='+w+'&hei='+w+'&fit=constrain' : u; }
