@@ -723,6 +723,7 @@ function fyOf(dstr){ const d=new Date(dstr||Date.now()); const y=d.getMonth()>=3
 /* ================= STATE ================= */
 const SALE_FROM = {GHTY:'Guwahati', JORABAT:'Jorabat'};
 const SANI = {name:'SANI STEELS PVT LTD', addr:'ULLUBARI, GUWAHATI, ASSAM', gstin:'18AAECS1422K1ZE'};
+function megTxt(){ const a=((S.db.locs.find(l=>l.name==='Jorabat')||{}).addr||'').replace(/[,\s]*MOB:.*$/i,'').replace(/\s*\n\s*/g,', ').trim(); return 'SANI STEELS PVT LTD, MEGHALAYA (SSPL JORABAT)'+(a?', '+a:''); }
 const DEFAULT_LOCS = [{name:'Jorabat',addr:''},{name:'Ulubari',addr:''},{name:'Boragaon Warehouse',addr:''}];
 const S = { user:null, admin:false, head:false, headPin:'', tab:'home', db:{items:[],users:[],pos:[],grns:[],claims:[],sales:[],locs:DEFAULT_LOCS}, idx:{}, stock:{}, cart:{brand:'JAQUAR',lines:[],vendor:'',remarks:''}, stockQ:'', stockBrand:'ALL', stockLimit:60, poQ:'', poBrand:'ALL', grn:null, sale:null, saleTab:'new', track:[], trackPO:{}, role:'', loginId:'', token:'', mobile:'', accts:null, af:{role:'sales',name:'',mobile:'',id:'',pw:''}, loginMode:'staff' };
 
@@ -1377,8 +1378,8 @@ function viewPO(no){
      <button class="btn gold" onclick="downloadPDF('${J(p.no)}','cost')">⬇ PDF – With Costing</button>
      <button class="btn green" onclick="shareModal('${J(p.no)}')">📤 Share (WhatsApp / Mail)</button>
      <button class="btn ghost" onclick="exportPO('${J(p.no)}')">⬇ Excel</button>`:''}
-     ${approved&&p.saleFrom==='JORABAT'?`<div style="flex-basis:100%;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px"><div class="muted" style="font-size:12px;margin-bottom:6px">🏬 Sale from Jorabat – internal PO for the billing team (invoice to be made in the name of SSPL Jorabat):</div>
-     <button class="btn gold" onclick="downloadPDF('${J(p.no)}','internal')">⬇ Internal PO – Sani Steels Pvt Ltd (PDF)</button> <button class="btn ghost" onclick="exportInternal('${J(p.no)}')">⬇ Excel (billing)</button></div>`:''}
+     ${approved&&p.saleFrom==='JORABAT'?`<div style="flex-basis:100%;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px"><div class="muted" style="font-size:12px;margin-bottom:6px">🏬 Sale from Jorabat – internal PO for the billing team (Sani Steels Pvt Ltd Meghalaya → Sani Steels Pvt Ltd Guwahati):</div>
+     <button class="btn gold" onclick="downloadPDF('${J(p.no)}','internal')">⬇ Internal PO – Meghalaya → Guwahati (PDF)</button> <button class="btn ghost" onclick="exportInternal('${J(p.no)}')">⬇ Excel (billing)</button></div>`:''}
      ${(p.status==='Open'||p.status==='Partial')&&canTab('grn')?`<button class="btn ghost" onclick="closeModal();startGRN('${J(p.no)}')">🚚 Receive (GRN)</button>`:''}
      ${rejected&&p.by===S.user?`<button class="btn gold" onclick="reviseReq('${J(p.no)}')">✎ Revise &amp; resend</button>`:''}
      ${canCancel?`<button class="btn red" onclick="cancelPO('${J(p.no)}')">${pending?'Withdraw request':'Cancel PO'}</button>`:''}
@@ -1414,16 +1415,16 @@ async function buildPOPdf(no, mode){
     doc.setDrawColor(201,162,39); doc.setLineWidth(.6); doc.line(M,22,W-M,22); };
   head();
   doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(11,37,69); doc.text(intl?'INTERNAL PURCHASE ORDER':'PURCHASE ORDER', W/2, 30, {align:'center', charSpace:1.2});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(107,118,132); doc.text(intl?'Inter-branch order - for billing team':cost?'With SSPL costing':'Quantity order', W/2, 34.5, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(107,118,132); doc.text(intl?'Inter-branch order - Sani Steels Pvt Ltd, Meghalaya to Sani Steels Pvt Ltd, Guwahati':cost?'With SSPL costing':'Quantity order', W/2, 34.5, {align:'center'});
   const meta=[['PO No',p.no],['Date',fdate(p.date)],['Brand',p.brand],['Vendor',p.vendor],['Raised by',p.mergedFrom?(p.raisedBy||[]).join(', '):p.by],['Approved by',(p.approvedBy||p.by)+(p.approvedAt?' on '+fdate(p.approvedAt):'')]];
   if(p.orderFor) meta.push(['Order for', cost ? forTxt(p)+(p.clientRef?' ('+p.clientRef+')':'') : p.orderFor]);
   if(intl){ meta.forEach(m=>{ if(m[0]==='Vendor'){ m[0]='Distributor'; } }); }
   if(meta.length%2) meta.push(['','']);
-  if(intl){ meta.push(['Supplier', SANI.name+', '+SANI.addr+' - GSTIN: '+SANI.gstin]); meta.push(['Buyer','SSPL JORABAT (invoice to be raised in this name)']); }
+  if(intl){ meta.push(['From', megTxt()]); meta.push(['To', SANI.name+', '+SANI.addr+' - GSTIN: '+SANI.gstin]); }
   if(p.deliverAt){ meta.push(['Delivery at', delTxt(p)]); meta.push(['','']); }
   if(p.remarks) meta.push(['Remarks',p.remarks]);
   doc.setFontSize(9.5); let y=41; const LH=5.2, half=(W-2*M)/2;
-  const FULL=['Remarks','Order for','Delivery at','Supplier','Buyer']; const blocks=[]; let pair=[];
+  const FULL=['Remarks','Order for','Delivery at','From','To']; const blocks=[]; let pair=[];
   meta.filter(m=>m[0]).forEach(m=>{ if(FULL.includes(m[0])){ if(pair.length){ blocks.push({pair}); pair=[]; } blocks.push({full:m, lines:doc.splitTextToSize(pdfTxt(m[1]), W-2*M-30).slice(0,4)}); } else { pair.push(m); if(pair.length===2){ blocks.push({pair}); pair=[]; } } });
   if(pair.length) blocks.push({pair});
   const boxH=blocks.reduce((h,b)=>h+(b.full?b.lines.length*LH:LH),0)+4;
@@ -1444,7 +1445,7 @@ async function buildPOPdf(no, mode){
     didDrawCell:d=>{ if(d.section==='body' && d.column.index===ic){ const im=imgs[d.row.index]; if(im){ const box=17, sc=Math.min(box/im.w,box/im.h), w=im.w*sc, h=im.h*sc; try{ doc.addImage(im.d,'JPEG', d.cell.x+(d.cell.width-w)/2, d.cell.y+(d.cell.height-h)/2, w, h); }catch(e){} } } },
     didDrawPage:d=>{ if(d.pageNumber>1) head(); } });
   let fy=doc.lastAutoTable.finalY+5; doc.setFontSize(8); doc.setTextColor(107,118,132);
-  if(cost){ doc.text(intl?'Rates shown are SSPL cost for reference. Billing team to raise invoice in the name of SSPL Jorabat. Taxes extra as applicable.':'Rates as per SSPL costing. Taxes extra as applicable.', M, fy); fy+=4; }
+  if(cost){ const nt=doc.splitTextToSize(intl?'Rates shown are SSPL cost for reference. Billing team to raise invoice in the name of SSPL Jorabat (Sani Steels Pvt Ltd, Meghalaya). Taxes extra as applicable.':'Rates as per SSPL costing. Taxes extra as applicable.', W-2*M); doc.text(nt, M, fy); fy+=4*nt.length-4; fy+=4; }
   if(fy>262){ doc.addPage(); head(); fy=34; }
   doc.setFontSize(8.5); doc.text('Prepared by: '+pdfTxt(p.by), M, fy+18); doc.text('Approved by: '+pdfTxt(p.approvedBy||p.by), W/2, fy+18, {align:'center'}); doc.text('Authorised Signatory', W-M, fy+18, {align:'right'});
   const n=doc.getNumberOfPages(); for(let i=1;i<=n;i++){ doc.setPage(i); doc.setDrawColor(221,221,221); doc.setLineWidth(.2); doc.line(M,286,W-M,286); doc.setFontSize(7.5); doc.setTextColor(107,118,132); doc.text('Sani Steels Pvt Ltd · Guwahati · Confidential', M, 290); doc.text('Generated '+fdate(new Date())+'   ·   Page '+i+' of '+n, W-M, 290, {align:'right'}); }
@@ -1467,7 +1468,7 @@ async function shareModal(no){
   const file=new File([SHARE.qty.blob],SHARE.qty.name,{type:'application/pdf'});
   SHARE.native=!!(navigator.canShare && navigator.canShare({files:[file]}));
   modal('Share '+esc(p.no), `<div class="muted" style="font-size:13px;margin-bottom:10px">Which PDF do you want to send?</div>
-   <div class="chips" id="shMode"><button class="chip on" onclick="setShareMode('qty')">QTY &amp; IMAGES<small>for vendor</small></button><button class="chip" onclick="setShareMode('cost')">WITH COSTING<small>internal</small></button>${SHARE.internal?`<button class="chip" onclick="setShareMode('internal')">INTERNAL PO<small>Sani Steels → Jorabat</small></button>`:''}</div>
+   <div class="chips" id="shMode"><button class="chip on" onclick="setShareMode('qty')">QTY &amp; IMAGES<small>for vendor</small></button><button class="chip" onclick="setShareMode('cost')">WITH COSTING<small>internal</small></button>${SHARE.internal?`<button class="chip" onclick="setShareMode('internal')">INTERNAL PO<small>Meghalaya → Guwahati</small></button>`:''}</div>
    <div class="actions">
     ${SHARE.native?`<button class="btn green" style="flex:1" onclick="shareNative()">📤 Share PDF (WhatsApp, Mail…)</button>`:''}
     <button class="btn ${SHARE.native?'ghost':'green'}" onclick="shareLink('wa')">WhatsApp</button><button class="btn ${SHARE.native?'ghost':''}" onclick="shareLink('mail')">Email</button>
@@ -1481,7 +1482,7 @@ function shareLink(ch){ const f=SHARE[SHARE.mode]; saveBlob(f.blob,f.name);
   const u = ch==='wa' ? 'https://wa.me/?text='+encodeURIComponent(SHARE.text+'\n(PDF attached: '+f.name+')') : 'mailto:?subject='+encodeURIComponent('Purchase Order '+SHARE.no+' – Sani Steels Pvt Ltd')+'&body='+encodeURIComponent(SHARE.text+'\n\nPlease find the PO attached: '+f.name);
   setTimeout(()=>window.open(u,'_blank'),500); toast('PDF downloaded – attach it in '+(ch==='wa'?'WhatsApp':'the mail')); }
 async function cancelPO(no){ if(!confirm('Cancel '+no+'?')) return; try{ busy(true); const r=await API.call('cancelPO',{no,by:S.user,admin:adminPass()}); Object.assign(S.db.pos.find(x=>x.no===no),r); rebuild(); closeModal(); render(); toast('PO cancelled'); }catch(e){ toast(e.message,true);} finally{busy(false);} }
-function exportInternal(no){ const p=S.db.pos.find(x=>x.no===no); xlsxDownload(p.lines.map((l,n)=>({'PO No':p.no,'PO Date':p.date,'Supplier':SANI.name+', '+SANI.addr,'Supplier GSTIN':SANI.gstin,'Invoice in name of':'SSPL JORABAT','Brand':p.brand,'Order For':forTxt(p),'Raised By':p.by,'Approved By':p.approvedBy||'','Delivery At':delTxt(p),'Sr':n+1,'Item Code':l.sku,Description:l.name,Qty:+l.qty,'Rate (SSPL cost)':+l.rate,Amount:(+l.qty)*(+l.rate)})),'Internal PO',no.replace(/\//g,'-')+'_Internal.xlsx'); }
+function exportInternal(no){ const p=S.db.pos.find(x=>x.no===no); xlsxDownload(p.lines.map((l,n)=>({'PO No':p.no,'PO Date':p.date,'From (Buyer)':megTxt(),'To (Supplier)':SANI.name+', '+SANI.addr,'Supplier GSTIN':SANI.gstin,'Brand':p.brand,'Order For':forTxt(p),'Raised By':p.by,'Approved By':p.approvedBy||'','Delivery At':delTxt(p),'Sr':n+1,'Item Code':l.sku,Description:l.name,Qty:+l.qty,'Rate (SSPL cost)':+l.rate,Amount:(+l.qty)*(+l.rate)})),'Internal PO',no.replace(/\//g,'-')+'_Internal.xlsx'); }
 function exportPO(no){ const p=S.db.pos.find(x=>x.no===no); xlsxDownload(p.lines.map((l,n)=>({'PO No':p.no,'Sale From':SALE_FROM[p.saleFrom]||'','Order For':forTxt(p),'Delivery At':delTxt(p),'Sr':n+1,'Item Code':l.sku,Description:l.name,Qty:+l.qty,Rate:+l.rate,Amount:(+l.qty)*(+l.rate),Received:+l.rcv||0})),'PO',no.replace(/\//g,'-')+'.xlsx'); }
 function docHead(title, sub){ return `<div class="ph1"><img src="${document.querySelector('.brand-marks img').src}"><img src="${document.querySelectorAll('.brand-marks img')[1].src}"></div><h1>${title}</h1><div class="sub">${sub}</div>`; }
 async function printPO(no, mode){
