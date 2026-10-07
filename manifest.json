@@ -1,0 +1,32 @@
+{
+  "name": "SSPL Sanitaryware Stock & PO Desk",
+  "short_name": "SSPL PO Desk",
+  "description": "Sani Steels \u2013 Sanitaryware stock, PO, GRN and sales desk",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B2545",
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
