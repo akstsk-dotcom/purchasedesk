@@ -673,6 +673,7 @@ body.mobile .ai:active .aic{transform:scale(.92)}
 body.mobile .aic svg{width:36px;height:36px;stroke-width:1.9}
 body.mobile .aib{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;border-radius:11px;background:#E5322D;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid #fff;box-sizing:border-box}
 body.mobile .ail{font-size:12.5px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2}
+.holders{margin-top:4px;display:flex;flex-direction:column;gap:3px;align-items:flex-end}.holders .hd{font-size:11px;background:#fff7e6;border:1px solid #f1d9a6;border-radius:8px;padding:3px 7px;text-align:right;white-space:nowrap}.holders .hd-sp{font-weight:700;color:var(--ink)}.holders .hd-sub{color:var(--muted,#8a8a8a);font-size:10.5px}.holders a{text-decoration:none}
 </style>
 </head>
 <body>
@@ -1259,12 +1260,12 @@ function stockList(){
    ${show.map(i=>{ const s=S.stock[key(i.brand,i.sku)]; return `<tr><td class="c-img">${imgHTML(i)}</td>
      <td><div class="iname">${esc(i.name)}</div><div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span> <span class="muted" style="font-size:11.5px">${esc(i.cat)}</span>${discTag(i)}</div></td>
      <td class="num c-hide">${inr(i.mrp)}</td><td class="num c-hide">${inr(i.cost)}</td><td class="num c-hide">${nf(s.open)}</td><td class="num c-hide">${nf(s.in)}</td><td class="num c-hide">${s.out?nf(s.out):'–'}</td><td class="num c-hide">${s.onOrder?nf(s.onOrder):'–'}</td>
-     <td class="num"><span class="${s.close>0?'ok':'low'}">${nf(s.close)}</span>${locLine(s)}${s.hold?`<div class="muted" style="font-size:11px;white-space:nowrap">${nf(Math.max(0,s.close-s.hold))} free · <b style="color:var(--amber)">${nf(s.hold)} held for clients</b></div>`:''}${document.body.classList.contains('mobile')?`<div class="muted" style="font-size:11px">MRP ${inr(i.mrp)}${s.out?' · '+s.out+' sold':''}${s.onOrder?' · '+s.onOrder+' on order':''}</div>`:''}</td>
+     <td class="num"><span class="${s.close>0?'ok':'low'}">${nf(s.close)}</span>${locLine(s)}${s.hold?`<div class="muted" style="font-size:11px;white-space:nowrap">${nf(Math.max(0,s.close-s.hold))} free · <b style="color:var(--amber)">${nf(s.hold)} held for clients</b></div>`:''}${holdersHTML(s)}${document.body.classList.contains('mobile')?`<div class="muted" style="font-size:11px">MRP ${inr(i.mrp)}${s.out?' · '+s.out+' sold':''}${s.onOrder?' · '+s.onOrder+' on order':''}</div>`:''}</td>
      ${S.admin?`<td><button class="btn ghost sm" onclick="editItem('${esc(i.brand)}','${esc(i.sku).replace(/'/g,"\\'")}')">Edit</button></td>`:''}</tr>`; }).join('')}
    </tbody></table></div>${list.length>show.length?`<div class="more"><button class="btn ghost" onclick="S.stockLimit+=100;stockList()">Show more (${nf(list.length-show.length)} left)</button></div>`:''}`;
 }
 function exportStock(){
-  const rows=stockRows().map(i=>{ const s=S.stock[key(i.brand,i.sku)]; return {Brand:i.brand,'Item Code':i.sku,Description:i.name,Category:i.cat,MRP:i.mrp,Cost:i.cost,Opening:s.open,Inward:s.in,'Out (Sold)':s.out,'On Order':s.onOrder,Closing:s.close,...Object.fromEntries(S.db.locs.map(l=>[l.name,locQty(s,l.name)])),'In Transit':s.transit,'Held for Clients':s.hold,'Free Stock':s.close-s.hold,'Closing Value':s.close*(+i.cost||0)}; });
+  const rows=stockRows().map(i=>{ const s=S.stock[key(i.brand,i.sku)]; return {Brand:i.brand,'Item Code':i.sku,Description:i.name,Category:i.cat,MRP:i.mrp,Cost:i.cost,Opening:s.open,Inward:s.in,'Out (Sold)':s.out,'On Order':s.onOrder,Closing:s.close,'Held for Clients':s.hold||0,'Held By (Salesperson / Client / PO)':(s.holders||[]).map(h=>h.sp+' – '+h.q+' ('+(h.client||'Client')+', '+h.po+')').join('; '),...Object.fromEntries(S.db.locs.map(l=>[l.name,locQty(s,l.name)])),'In Transit':s.transit,'Held for Clients':s.hold,'Free Stock':s.close-s.hold,'Closing Value':s.close*(+i.cost||0)}; });
   xlsxDownload(rows,'Stock','SSPL_Sanitary_Stock_'+today()+'.xlsx');
 }
 function xlsxDownload(rows, sheet, file){
@@ -1908,6 +1909,13 @@ const liveSales = () => (S.db.sales||[]).filter(s=>s.status!=='Cancelled');
 const ageCls = d => d>30?'r':d>15?'a':'g';
 const ageTag = d => `<span class="age ${ageCls(d)}">${d}d</span>`;
 
+
+/* Who is holding client stock — so another salesperson can call them for an emergency client */
+function spMob(n){ const u=(S.db.users||[]).find(x=>String(x.name).toLowerCase()===String(n).trim().toLowerCase()); return u&&u.mobile?String(u.mobile).replace(/\D/g,'').slice(-10):''; }
+function holdersHTML(s){ if(!s.holders||!s.holders.length) return '';
+  return '<div class="holders">'+s.holders.map(h=>{ const first=String(h.sp).split(',')[0].trim(), m=spMob(first);
+    const call=m?` <a href="tel:${m}" title="Call ${esc(first)}" onclick="event.stopPropagation()">📞</a> <a href="https://wa.me/91${m}?text=${encodeURIComponent('Hi '+first+', you have '+h.q+' pc held for '+(h.client||'client')+' ('+h.po+'). I need it for an urgent client – can I take it?')}" target="_blank" title="WhatsApp ${esc(first)}" onclick="event.stopPropagation()">💬</a>`:'';
+    return `<div class="hd"><span class="hd-sp">👤 ${esc(h.sp||'—')}</span> <b>${nf(h.q)}</b>${call}<div class="hd-sub">${esc(h.client||'Client')} · ${esc(h.po)}${h.age?' · '+h.age+'d':''}</div></div>`; }).join('')+'</div>'; }
 /* One row per client-PO line: ordered / received (GRN) / delivered (Sale) / lying in warehouse, with FIFO ageing */
 function buildTrack(){
   const t0=today(), kk=(po,sku)=>po+'|'+String(sku).trim().toUpperCase();
@@ -1915,7 +1923,7 @@ function buildTrack(){
   const rc={}, dl={};
   S.db.grns.forEach(g=>{ if(!g.poNo) return; g.lines.forEach(l=>{ if(+l.qty>0){ const k=kk(g.poNo,l.sku); (rc[k]=rc[k]||[]).push({d:String(g.date).slice(0,10),q:+l.qty,t:g.createdAt||''}); } }); });
   liveSales().forEach(s=>s.lines.forEach(l=>{ const po=l.poNo||s.poNo; if(!po||!(+l.qty>0)) return; const k=kk(po,l.sku); (dl[k]=dl[k]||[]).push({d:String(s.date).slice(0,10),q:+l.qty,t:s.createdAt||''}); }));
-  for(const k in S.stock) S.stock[k].hold=0;
+  for(const k in S.stock){ S.stock[k].hold=0; S.stock[k].holders=[]; }
   const rows=[];
   S.db.pos.forEach(po=>{
     if(po.orderFor!=='Client' || !['Open','Partial','Received'].includes(po.status)) return;
@@ -1929,7 +1937,7 @@ function buildTrack(){
       let st;
       if(ordered>0 && dq>=ordered) st='Delivered'; else if(wh>0) st=dq>0?'Part delivered':'In warehouse'; else if(rcvAll<ordered) st='Awaiting stock'; else st='Closed short';
       const sk=key(po.brand,l.sku), it=S.idx[sk]||{};
-      if(S.stock[sk]) S.stock[sk].hold+=wh;
+      if(S.stock[sk]){ S.stock[sk].hold+=wh; if(wh>0) S.stock[sk].holders.push({sp:spName(po),q:wh,client:po.client||'',po:po.no,age}); }
       rows.push({po:po.no,brand:po.brand,client:po.client||'',clientRef:po.clientRef||'',sp:spName(po),poDate:po.date,sku:l.sku,name:l.name,
         ordered,rcv:rcvAll,good,dq,wh,aw:Math.max(0,ordered-rcvAll),st,
         firstRecv:R.length?R[0].d:'',lastRecv:R.length?R[R.length-1].d:'',firstDel:D.length?D[0].d:'',lastDel:D.length?D[D.length-1].d:'',
@@ -1967,7 +1975,7 @@ function poTrackHTML(p){
 }
 
 /* ---------- SALE TAB (stock out) ---------- */
-function saleInit(){ if(!S.sale) S.sale={loc:openLoc(),type:'Client',poNo:'',client:'',sp:(S.role==='warehouse'||S.admin)?'':(S.user||''),date:today(),ref:'',remarks:'',lines:[],q:''}; }
+function saleInit(){ if(!S.sale) S.sale={loc:openLoc(),type:'Client',poNo:'',client:'',sp:(S.role==='warehouse'||S.admin)?'':(S.user||''),date:today(),ref:'',billFrom:'',inv:'',remarks:'',lines:[],q:''}; }
 function saleReset(){ S.sale=null; saleInit(); }
 function clientPOsLying(){ const m={}; S.track.forEach(r=>{ if(r.wh<=0) return; const o=m[r.po]||(m[r.po]={no:r.po,client:r.client,sp:r.sp,wh:0,age:0}); o.wh+=r.wh; o.age=Math.max(o.age,r.age); }); return Object.values(m).sort((a,b)=>b.age-a.age); }
 function vSale(){
@@ -1978,13 +1986,14 @@ function vSale(){
 }
 function saleFromPO(no){ S.saleTab='new'; S.sale=null; saleInit(); pickSalePO(no); }
 function pickSalePO(no){
-  saleInit(); const s=S.sale; s.type='Client'; s.poNo=no||''; s.lines=[]; s.client='';
+  saleInit(); const s=S.sale; s.type='Client'; s.poNo=no||''; s.lines=[]; s.client=''; { const _p=no&&S.db.pos.find(x=>x.no===no); if(_p&&_p.saleFrom) s.billFrom=_p.saleFrom; }
   if(no){ const rows=S.track.filter(r=>r.po===no&&r.wh>0);
     rows.forEach(r=>s.lines.push({brand:r.brand,sku:r.sku,name:r.name,qty:r.wh,max:r.wh,cost:r.cost,mrp:+(S.idx[key(r.brand,r.sku)]||{}).mrp||0,poNo:no}));
     if(rows[0]){ s.client=rows[0].client; s.sp=rows[0].sp; } }
   go('sale');
 }
 function setSaleLoc(v){ saleInit(); const s=S.sale; s.loc=v; s.lines.forEach(l=>{ if(s.type!=='Client'){ const st=S.stock[key(l.brand,l.sku)]; l.max=Math.max(0,Math.min(locQty(st,v),st.close-st.hold)); if(l.qty>l.max) l.qty=l.max; } }); s.lines=s.lines.filter(l=>l.qty>0); saleLines(); saleRes(); }
+function setSaleBill(v){ saleInit(); S.sale.billFrom=v; saleForm(); }
 function setSaleType(t){ saleInit(); const s=S.sale; if(s.type===t) return; if(s.lines.length && !confirm('Clear the items already added?')) return; s.type=t; s.poNo=''; s.lines=[]; s.client=''; s.sp=(S.role==='warehouse'||S.admin)?'':S.user; vSale(); }
 function saleForm(){
   const s=S.sale, cl=s.type==='Client', list=clientPOsLying(), users=S.db.users.filter(u=>u.role!=='warehouse').map(u=>u.name);
@@ -1998,14 +2007,17 @@ function saleForm(){
       ${s.poNo?`<div class="kv" style="margin-top:10px"><div>Client<b>${esc(s.client)}</b></div><div>Salesperson<b>${esc(s.sp)}</b></div></div>`:''}`
     :`<div class="fgrid" style="margin-top:12px"><label class="f">Customer / client name<input class="in" id="s_client" value="${esc(s.client)}" placeholder="optional"></label>
        <label class="f">Salesperson *<select class="in" id="s_sp"><option value="" ${s.sp?'':'selected'}>— Select salesperson —</option>${users.map(n=>`<option ${n===s.sp?'selected':''}>${esc(n)}</option>`).join('')}</select></label></div>`}
-    <div class="fgrid" style="margin-top:12px"><label class="f">Sold from location *<select class="in" id="s_loc" onchange="setSaleLoc(this.value)">${S.db.locs.map(l=>`<option ${l.name===s.loc?'selected':''}>${esc(l.name)}</option>`).join('')}</select></label><label class="f">Sale / delivery date<input class="in" type="date" id="s_date" value="${esc(s.date)}" max="${today()}"></label>
-      <label class="f">Bill / challan ref (optional)<input class="in" id="s_ref" value="${esc(s.ref)}" placeholder="free text"></label>
+    <div class="f" style="font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin:14px 0 6px">Bill from *</div>
+    <div class="chips"><button class="chip ${s.billFrom==='GHTY'?'on':''}" onclick="setSaleBill('GHTY')">🏢 GUWAHATI (SSPL)</button><button class="chip ${s.billFrom==='JORABAT'?'on':''}" onclick="setSaleBill('JORABAT')">🏬 JORABAT (SSPL MEGHALAYA)</button></div>
+    <div class="fgrid" style="margin-top:12px"><label class="f">Sale invoice no. *<input class="in" id="s_inv" value="${esc(s.inv)}" placeholder="Tally sales invoice no." autocapitalize="characters" spellcheck="false"></label>
+      <label class="f">Stock out from warehouse *<select class="in" id="s_loc" onchange="setSaleLoc(this.value)">${S.db.locs.map(l=>`<option ${l.name===s.loc?'selected':''}>${esc(l.name)}</option>`).join('')}</select><span class="muted" style="font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;margin-top:3px">Stock will reduce from this location</span></label>
+      <label class="f">Sale / delivery date *<input class="in" type="date" id="s_date" value="${esc(s.date)}" max="${today()}"></label>
       <label class="f" style="grid-column:span 2">Remarks<input class="in" id="s_rem" value="${esc(s.remarks)}" placeholder="optional"></label></div>
   </div>
   ${cl?'':`<div class="card" style="margin-bottom:14px"><div class="bar" style="margin:0"><input class="in search" id="s_q" placeholder="Search item code or name to sell from free stock…" value="${esc(s.q)}"></div><div id="s_res"></div></div>`}
   <div id="s_lines"></div>
   <div class="actions"><button class="btn gold" onclick="saveSale()">Record Sale &amp; Stock Out</button><button class="btn ghost" onclick="if(!S.sale.lines.length||confirm('Clear this sale?')){saleReset();vSale()}">Clear</button></div>`;
-  const b={s_client:'client',s_date:'date',s_ref:'ref',s_rem:'remarks'};
+  const b={s_client:'client',s_date:'date',s_inv:'inv',s_rem:'remarks'};
   for(const id in b){ const el=$('#'+id); if(el) el.addEventListener('input',e=>s[b[id]]=e.target.value); }
   const sp=$('#s_sp'); if(sp) sp.addEventListener('change',e=>s.sp=e.target.value);
   const q=$('#s_q'); if(q) q.addEventListener('input',e=>{ s.q=e.target.value; saleRes(); });
@@ -2036,6 +2048,10 @@ async function saveSale(){
   if(s.type==='Client' && !s.poNo) return toast('Select the client order',true);
   if(s.type==='Stock' && !s.sp) return toast('Select the salesperson',true);
   if(!s.lines.length) return toast('Add at least one item',true);
+  if(!s.billFrom) return toast('Select Bill from (Guwahati / Jorabat)',true);
+  s.inv=(s.inv||'').trim(); if(!s.inv) return toast('Enter the sale invoice no.',true);
+  if(!s.loc) return toast('Select the warehouse location stock goes out from',true);
+  { const dup=(S.db.sales||[]).find(x=>x.status!=='Cancelled'&&x.billFrom===s.billFrom&&String(x.inv||'').trim().toUpperCase()===s.inv.toUpperCase()); if(dup&&!confirm('Invoice '+s.inv+' ('+SALE_FROM[s.billFrom]+') is already recorded in '+dup.no+'. Record again?')) return; }
   if(!s.date) return toast('Select the sale date',true);
   if(s.date>today()) return toast('Sale date cannot be in the future',true);
   for(const l of s.lines){ const k=key(l.brand,l.sku); let mx;
@@ -2043,7 +2059,7 @@ async function saveSale(){
     else { const st=S.stock[k]; mx=st?Math.max(0,Math.min(locQty(st,s.loc),st.close-st.hold)):0; }
     if(s.type==='Client'){ const lq=locQty(S.stock[k],s.loc); if(l.qty>lq) return toast(l.sku+': only '+lq+' at '+s.loc+' - transfer stock there or change the location',true); }
     if(l.qty>mx) return toast(l.sku+': only '+mx+' available now – please adjust',true); }
-  const sale={loc:s.loc,date:s.date,type:s.type,client:s.type==='Client'?s.client:(s.client||'').trim(),poNo:s.type==='Client'?s.poNo:'',sp:s.sp,ref:(s.ref||'').trim(),remarks:(s.remarks||'').trim(),by:S.user,
+  const sale={loc:s.loc,date:s.date,type:s.type,client:s.type==='Client'?s.client:(s.client||'').trim(),poNo:s.type==='Client'?s.poNo:'',sp:s.sp,billFrom:s.billFrom,inv:s.inv,ref:s.inv,remarks:(s.remarks||'').trim(),by:S.user,
     lines:s.lines.map(l=>({brand:l.brand,sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,mrp:l.mrp,poNo:l.poNo||''}))};
   try{ busy(true,'Recording sale…'); const r=await API.call('createSale',{sale}); saleReset(); await refresh(true); S.saleTab='log'; vSale(); toast('Sale '+r.no+' recorded – stock updated'); viewSale(r.no); }
   catch(e){ toast(e.message,true); } finally{ busy(false); }
@@ -2051,24 +2067,24 @@ async function saveSale(){
 function saleLog(){
   const q=(S.saleQ||'').toLowerCase(), ty=S.saleTy||'ALL', mob=document.body.classList.contains('mobile');
   const tq=x=>x.lines.reduce((a,l)=>a+(+l.qty||0),0);
-  const list=(S.db.sales||[]).filter(x=>(ty==='ALL'||x.type===ty)&&(!q||(x.no+' '+(x.client||'')+' '+(x.sp||'')+' '+x.by+' '+(x.poNo||'')+' '+(x.ref||'')+' '+x.lines.map(l=>l.sku+' '+l.name).join(' ')).toLowerCase().includes(q)));
+  const list=(S.db.sales||[]).filter(x=>(ty==='ALL'||x.type===ty)&&(!q||(x.no+' '+(x.client||'')+' '+(x.sp||'')+' '+x.by+' '+(x.poNo||'')+' '+(x.ref||'')+' '+(x.inv||'')+' '+x.lines.map(l=>l.sku+' '+l.name).join(' ')).toLowerCase().includes(q)));
   const typ=x=>x.type==='Client'?'<span class="tag" style="background:#E3F1FB;color:#125A8A">CLIENT ORDER</span>':'<span class="tag" style="background:#EEF1F6">STOCK SALE</span>';
   const sttag=x=>x.status==='Cancelled'?'<span class="tag st-cancelled">CANCELLED</span>':'<span class="tag st-received">STOCK OUT</span>';
-  $('#saleBody').innerHTML=`<div class="bar"><input class="in search" id="slq" placeholder="Search sale no, client, salesperson, item…" value="${esc(S.saleQ||'')}"><select class="in" id="slt"><option value="ALL">All types</option><option value="Client">Client order</option><option value="Stock">Stock sale</option></select></div>
+  $('#saleBody').innerHTML=`<div class="bar"><input class="in search" id="slq" placeholder="Search sale no, invoice no, client, salesperson, item…" value="${esc(S.saleQ||'')}"><select class="in" id="slt"><option value="ALL">All types</option><option value="Client">Client order</option><option value="Stock">Stock sale</option></select></div>
   ${!list.length?'<div class="card empty">No sales recorded yet</div>':mob?list.map(x=>`<div class="card" style="margin-bottom:10px;padding:12px;cursor:pointer" onclick="viewSale('${jq(x.no)}')">
      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:14.5px;color:var(--navy)">${esc(x.no)}</b>${sttag(x)}</div>
      <div style="margin-top:5px">${typ(x)} <b style="font-size:12.5px">${esc(x.client||'')}</b></div>
-     <div class="muted" style="font-size:12.5px;margin-top:4px">${fdate(x.date)} · Salesperson <b style="color:var(--ink)">${esc(x.sp||'–')}</b></div>
+     <div class="muted" style="font-size:12.5px;margin-top:4px">${fdate(x.date)} · Salesperson <b style="color:var(--ink)">${esc(x.sp||'–')}</b></div><div class="muted" style="font-size:12.5px;margin-top:3px">Inv <b style="color:var(--ink)">${esc(x.inv||x.ref||'–')}</b>${x.billFrom?' · Bill '+esc(SALE_FROM[x.billFrom]):''} · From <b style="color:var(--ink)">${esc(x.loc||'–')}</b></div>
      <div style="font-size:12.5px;margin-top:4px">${x.lines.length} item${x.lines.length>1?'s':''} · <b>${nf(tq(x))}</b> qty out${x.poNo?` · ${esc(x.poNo)}`:''}</div></div>`).join('')
-    :`<div class="tscroll"><table class="t"><thead><tr><th>Sale No</th><th>Date</th><th>Type</th><th>Client</th><th>Salesperson</th><th>Client PO</th><th class="num">Items</th><th class="num">Qty out</th><th>Recorded by</th><th>Status</th></tr></thead><tbody>
-    ${list.map(x=>`<tr style="cursor:pointer" onclick="viewSale('${jq(x.no)}')"><td class="nw"><b>${esc(x.no)}</b></td><td class="nw">${fdate(x.date)}</td><td>${typ(x)}</td><td>${esc(x.client||'–')}</td><td>${esc(x.sp||'–')}</td><td class="nw">${esc(x.poNo||'–')}</td><td class="num">${x.lines.length}</td><td class="num">${nf(tq(x))}</td><td>${esc(x.by)}</td><td class="nw">${sttag(x)}</td></tr>`).join('')}</tbody></table></div>`}`;
+    :`<div class="tscroll"><table class="t"><thead><tr><th>Sale No</th><th>Date</th><th>Bill from</th><th>Invoice No</th><th>Stock out from</th><th>Type</th><th>Client</th><th>Salesperson</th><th>Client PO</th><th class="num">Items</th><th class="num">Qty out</th><th>Recorded by</th><th>Status</th></tr></thead><tbody>
+    ${list.map(x=>`<tr style="cursor:pointer" onclick="viewSale('${jq(x.no)}')"><td class="nw"><b>${esc(x.no)}</b></td><td class="nw">${fdate(x.date)}</td><td class="nw">${esc(SALE_FROM[x.billFrom]||'–')}</td><td class="nw"><b>${esc(x.inv||x.ref||'–')}</b></td><td class="nw">${esc(x.loc||'–')}</td><td>${typ(x)}</td><td>${esc(x.client||'–')}</td><td>${esc(x.sp||'–')}</td><td class="nw">${esc(x.poNo||'–')}</td><td class="num">${x.lines.length}</td><td class="num">${nf(tq(x))}</td><td>${esc(x.by)}</td><td class="nw">${sttag(x)}</td></tr>`).join('')}</tbody></table></div>`}`;
   $('#slt').value=ty; $('#slt').addEventListener('change',e=>{ S.saleTy=e.target.value; saleLog(); });
   $('#slq').addEventListener('input',e=>{ S.saleQ=e.target.value; const p=e.target.selectionStart; saleLog(); const n=$('#slq'); n.focus(); n.setSelectionRange(p,p); });
 }
 function viewSale(no){
   const x=(S.db.sales||[]).find(s=>s.no===no); if(!x) return; const can=(S.admin||S.head)&&x.status!=='Cancelled', tq=x.lines.reduce((a,l)=>a+(+l.qty||0),0);
   modal(`${esc(x.no)} ${x.status==='Cancelled'?'<span class="tag st-cancelled">CANCELLED</span>':'<span class="tag st-received">STOCK OUT</span>'}`,
-  `<div class="kv"><div>Date<b>${fdate(x.date)}</b></div><div>Type<b>${x.type==='Client'?'Against client order':'Stock / counter sale'}</b></div><div>Client<b>${esc(x.client||'–')}</b></div><div>Salesperson<b>${esc(x.sp||'–')}</b></div><div>Sold from<b>${esc(x.loc||openLoc())}</b></div>${x.poNo?`<div>Client PO<b><a href="#" onclick="viewPO('${jq(x.poNo)}');return false">${esc(x.poNo)}</a></b></div>`:''}<div>Recorded by<b>${esc(x.by)}</b></div>${x.ref?`<div>Ref<b>${esc(x.ref)}</b></div>`:''}</div>
+  `<div class="kv"><div>Date<b>${fdate(x.date)}</b></div><div>Type<b>${x.type==='Client'?'Against client order':'Stock / counter sale'}</b></div><div>Client<b>${esc(x.client||'–')}</b></div><div>Salesperson<b>${esc(x.sp||'–')}</b></div><div>Bill from<b>${esc(SALE_FROM[x.billFrom]||'–')}</b></div><div>Invoice No<b>${esc(x.inv||x.ref||'–')}</b></div><div>Stock out from<b>${esc(x.loc||openLoc())}</b></div>${x.poNo?`<div>Client PO<b><a href="#" onclick="viewPO('${jq(x.poNo)}');return false">${esc(x.poNo)}</a></b></div>`:''}<div>Recorded by<b>${esc(x.by)}</b></div></div>
    ${x.remarks?`<div class="note" style="margin-bottom:12px">${esc(x.remarks)}</div>`:''}
    ${x.status==='Cancelled'?`<div class="note" style="margin-bottom:12px;background:#FBEAEA;border-color:#E7B9B9;color:var(--neg)"><b>Cancelled by ${esc(x.cancelledBy)}</b> on ${fdate(x.cancelledAt)}${x.cancelReason?' — '+esc(x.cancelReason):''} · stock returned</div>`:''}
    <div class="tscroll"><table class="t cards"><thead><tr><th></th><th>Item</th><th class="num">Qty out</th></tr></thead><tbody>${x.lines.map(l=>`<tr><td class="c-img">${imgHTML(S.idx[key(l.brand,l.sku)])}</td><td><div class="iname">${esc(l.name)}</div><span class="tag">${esc(l.brand)}</span> <span class="sku">${esc(l.sku)}</span></td><td class="num"><b>${nf(l.qty)}</b></td></tr>`).join('')}</tbody></table></div>
