@@ -1008,9 +1008,10 @@ const Supa = {
     switch(a){
       case 'bootstrap': {
         if(!(c.p_adm||(c.p_who&&c.p_pin))) throw new Error('Sign in to load data');
-        const [users,pos,grns,claims,sets,d,sales,transfers] = await Promise.all([this.all('app_users','name,head,role','name'), this.all('pos','data','created_at.desc,no'), this.all('grns','data','created_at.desc,no'), this.all('claims','data','created_at.desc,id'), this.all('app_settings','k,v','k'), this.itemsState(), this.all('sales','data','created_at.desc,no').catch(()=>[]), this.all('transfers','data','created_at.desc,no').catch(()=>[])]);
+        const [users,pos,grns,claims,sets,d,sales,transfers,staff] = await Promise.all([this.all('app_users','name,head,role','name'), this.all('pos','data','created_at.desc,no'), this.all('grns','data','created_at.desc,no'), this.all('claims','data','created_at.desc,id'), this.all('app_settings','k,v','k'), this.itemsState(), this.all('sales','data','created_at.desc,no').catch(()=>[]), this.all('transfers','data','created_at.desc,no').catch(()=>[]), this.rpc('app_read', Object.assign({p_table:'staff'}, c)).catch(()=>[])]);
+        const mob={}; (staff||[]).forEach(x=>{ if(x&&x.name) mob[String(x.name).trim().toLowerCase()]=x.mobile||''; });
         const lr=sets.find(x=>x.k==='locs');
-        return {items:Local.items(d), users:users.map(u=>({name:u.name,head:!!u.head,role:u.role||''})), pos:pos.map(r=>r.data), grns:grns.map(r=>r.data), claims:claims.map(r=>r.data), sales:sales.map(r=>r.data), transfers:transfers.map(r=>r.data), locs:lr?lr.v:DEFAULT_LOCS};
+        return {items:Local.items(d), users:users.map(u=>({name:u.name,head:!!u.head,role:u.role||'',mobile:mob[String(u.name).trim().toLowerCase()]||''})), pos:pos.map(r=>r.data), grns:grns.map(r=>r.data), claims:claims.map(r=>r.data), sales:sales.map(r=>r.data), transfers:transfers.map(r=>r.data), locs:lr?lr.v:DEFAULT_LOCS};
       }
       case 'login': { const r=await this.rpc('acct_login',{p_id:p.id||'',p_pw:p.pw||''}); if(!r||!r.ok) throw new Error((r&&r.error)||'Login failed'); return r; }
       case 'me': return this.rpc('acct_me',{p_id:p.id||'',p_tok:p.token||''});
