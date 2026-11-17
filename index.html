@@ -906,8 +906,8 @@ const Supa = {
     return r.status===204 ? null : r.json();
   },
   rpc(fn, args){ return this.req(SUPA.URL+'/rest/v1/rpc/'+fn, {method:'POST', headers:this.hdr(), body:JSON.stringify(args)}); },
-  async all(table, cols, order){ const out=[]; for(let off=0;;off+=1000){ const rows=await this.req(SUPA.URL+'/rest/v1/'+table+'?select='+cols+'&order='+order+'&limit=1000&offset='+off, {headers:this.hdr()}); out.push(...rows); if(rows.length<1000) break; } return out; },
-  async one(table, col, val, cols){ const rows=await this.req(SUPA.URL+'/rest/v1/'+table+'?'+col+'=eq.'+encodeURIComponent(val)+'&select='+cols, {headers:this.hdr()}); return rows[0]||null; },
+  async all(table, cols, order){ const out=[]; for(let off=0;;off+=1000){ const rows=await this.rpc('app_read', Object.assign({p_table:table, p_offset:off}, this.cr())); out.push(...rows); if(rows.length<1000) break; } return out; },
+  async one(table, col, val, cols){ const rows=await this.rpc('app_read', Object.assign({p_table:table, p_vals:[String(val)]}, this.cr())); return rows[0]||null; },
   cr(){ return {p_who:S.loginId||'', p_pin:S.token||'', p_adm:(S.admin&&S.adminPass)||''}; },
   nextNo(pre, date){ return this.rpc('app_next_no', {p_pre:pre, p_fy:fyOf(date)}); },
   put(ops){ return this.rpc('app_put2', Object.assign({p_ops:ops}, this.cr())); },
@@ -921,6 +921,7 @@ const Supa = {
     const iso=()=>new Date().toISOString(), c=this.cr();
     switch(a){
       case 'bootstrap': {
+        if(!(c.p_adm||(c.p_who&&c.p_pin))) throw new Error('Sign in to load data');
         const [users,pos,grns,claims,sets,d,sales,transfers] = await Promise.all([this.all('app_users','name,head,role','name'), this.all('pos','data','created_at.desc,no'), this.all('grns','data','created_at.desc,no'), this.all('claims','data','created_at.desc,id'), this.all('app_settings','k,v','k'), this.itemsState(), this.all('sales','data','created_at.desc,no').catch(()=>[]), this.all('transfers','data','created_at.desc,no').catch(()=>[])]);
         const lr=sets.find(x=>x.k==='locs');
         return {items:Local.items(d), users:users.map(u=>({name:u.name,head:!!u.head,role:u.role||''})), pos:pos.map(r=>r.data), grns:grns.map(r=>r.data), claims:claims.map(r=>r.data), sales:sales.map(r=>r.data), transfers:transfers.map(r=>r.data), locs:lr?lr.v:DEFAULT_LOCS};
@@ -967,7 +968,7 @@ const Supa = {
       }
       case 'mergePOs': {
         const nos=p.nos||[]; if(nos.length<2) throw new Error('Select at least 2 POs');
-        const rows=await this.req(SUPA.URL+'/rest/v1/pos?no=in.('+encodeURIComponent(nos.map(n=>'"'+n+'"').join(','))+')&select=no,ver,data', {headers:this.hdr()});
+        const rows=await this.rpc('app_read', Object.assign({p_table:'pos', p_vals:nos.map(String)}, this.cr()));
         const vers={}; rows.forEach(r=>vers[r.no]=r.ver);
         if(!(await this.rpc('app_can',{p_who:c.p_who,p_pin:c.p_pin,p_adm:c.p_adm}))) throw new Error('Only a team head or admin can merge POs');
         const pos=rows.map(r=>r.data); mergePOsCore(JSON.parse(JSON.stringify(pos)), p, ()=>'x');   /* dry run */
@@ -1179,7 +1180,7 @@ async function adminSignIn(){
 function logout(expired){
   const id=S.loginId, tok=S.token; if(id&&tok&&navigator.onLine){ try{ API.call('logout',{id,token:tok}).catch(()=>{}); }catch(e){} }
   S.user=null; S.admin=false; S.adminPass=''; S.head=false; S.role=''; S.loginId=''; S.token=''; S.mobile=''; S.accts=null;
-  ls('sw_sess',null); ls('sw_user',null); ls('sw_head',null); closeModal&&closeModal(); render(); if(expired===true) toast('Session expired – please sign in again',true);
+  ls('sw_sess',null); ls('sw_cache',null); ls('sw_user',null); ls('sw_head',null); closeModal&&closeModal(); render(); if(expired===true) toast('Session expired – please sign in again',true);
 }
 function pwModal(){
   modal('Change my password', `<div class="muted" style="font-size:13px;margin-bottom:10px">Login ID: <b>${esc(S.loginId)}</b></div>
