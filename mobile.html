@@ -776,7 +776,7 @@ body.mobile .card{border-radius:16px}
 .btn{transition:transform .08s,box-shadow .15s}
 .btn:active{transform:scale(.97)}
 table.t tbody tr:hover td{background:#F3F6FB}
-table.t thead th{position:sticky;top:0;background:#fff;z-index:1}
+table.t thead th{position:sticky;top:0;background:#0E0E10;color:#fff;z-index:2}
 .tscroll{max-height:72vh;overflow:auto;border-radius:12px}
 .toast{border-radius:12px;font-weight:600}
 .modal .mbox{border-radius:18px}
@@ -946,6 +946,8 @@ const Local = {
       case 'updateItem': { const o={}; ITEM_F.forEach(f=>{ if(p[f]!==undefined && f!=='img') o[f]=p[f]; }); this.setOv(d,p.brand,p.sku,o); out=true; break; }
       case 'uploadPhoto': { this.setOv(d,p.brand,p.sku,{img:p.dataUrl}); out={img:p.dataUrl}; break; }
       case 'createSale': { const sl=Object.assign({},p.sale); if(!sl.lines||!sl.lines.length) throw new Error('No items in sale'); d.sales=d.sales||[]; sl.no=this.nextNo(d,'SAL',sl.date); sl.createdAt=new Date().toISOString(); sl.status='Done'; d.sales.push(sl); out=sl; break; }
+      case 'createBooking': { const b=Object.assign({},p.bk); if(!b.lines||!b.lines.length) throw new Error('Nothing to book'); d.sales=d.sales||[]; b.no='BKG-'+Date.now().toString(36).toUpperCase(); b.createdAt=new Date().toISOString(); b.type='Booking'; b.status='Booked'; d.sales.push(b); out=b; break; }
+      case 'releaseBooking': { d.sales=d.sales||[]; const b=d.sales.find(x=>x.no===p.no&&x.type==='Booking'); if(!b) throw new Error('Booking not found'); b.status='Cancelled'; b.cancelReason='Released'; b.cancelledBy=p.by; b.cancelledAt=new Date().toISOString(); out=b; break; }
       case 'createTransfer': { const t=Object.assign({},p.tr); if(!t.lines||!t.lines.length) throw new Error('No items in transfer'); if(!t.from||!t.to||t.from===t.to) throw new Error('Choose two different locations'); d.transfers=d.transfers||[]; t.no=this.nextNo(d,'TRF',t.date); t.createdAt=new Date().toISOString(); t.status='In transit'; d.transfers.push(t); out=t; break; }
       case 'receiveTransfer': case 'cancelTransfer': { const t=(d.transfers||[]).find(x=>x.no===p.no); if(!t) throw new Error('Transfer not found'); if(t.status!=='In transit') throw new Error('This transfer is already '+t.status); if(a==='receiveTransfer'){ t.status='Received'; t.receivedBy=p.by; t.receivedAt=new Date().toISOString(); t.receivedNote=p.note||''; } else { t.status='Cancelled'; t.cancelledBy=p.by; t.cancelledAt=new Date().toISOString(); } out=t; break; }
       case 'cancelSale': { d.sales=d.sales||[]; const sl=d.sales.find(x=>x.no===p.no); if(!sl) throw new Error('Sale not found'); if(!this.approver(d,p)) throw new Error('Only a team head or admin can cancel a sale'); sl.status='Cancelled'; sl.cancelledBy=p.by; sl.cancelledAt=new Date().toISOString(); sl.cancelReason=p.reason||''; out=sl; break; }
@@ -1135,6 +1137,16 @@ const Supa = {
         await this.put([{t:'sales',op:'put',id:sl.no,ver:null,data:sl}]);   /* server re-checks stock before saving */
         return sl;
       }
+      case 'createBooking': {
+        const b=Object.assign({},p.bk); if(!b.lines||!b.lines.length) throw new Error('Nothing to book');
+        b.type='Booking'; b.status='Booked'; b.createdAt=iso(); b.no='BKG-'+Date.now().toString(36).toUpperCase();
+        await this.put([{t:'sales',op:'put',id:b.no,ver:null,data:b}]); return b;
+      }
+      case 'releaseBooking': {
+        const row=await this.one('sales','no',p.no,'ver,data'); if(!row) throw new Error('Booking not found');
+        const b=row.data; if(b.type!=='Booking') throw new Error('Not a booking'); b.status='Cancelled'; b.cancelReason='Released'; b.cancelledBy=p.by; b.cancelledAt=iso();
+        await this.put([{t:'sales',op:'put',id:b.no,ver:row.ver,data:b}]); return b;
+      }
       case 'createTransfer': {
         const t=Object.assign({},p.tr); if(!t.lines||!t.lines.length) throw new Error('No items in transfer');
         t.createdAt=iso(); t.status='In transit'; t.no=await this.nextNo('TRF',t.date);
@@ -1165,12 +1177,12 @@ function locLine(s){ const L=(S.db.locs||[]).map(l=>l.name), parts=L.map(n=>[n,(
 function rebuild(){
   S.head = S.role==='head';
   const idx={}, st={};
-  S.db.items.forEach(i=>{ const k=key(i.brand,i.sku); idx[k]=i; i._s=(i.sku+' '+i.name+' '+i.cat).toLowerCase(); st[k]={open:(+i.open||0)+(+i.openB||0),in:0,out:0,onOrder:0,hold:0,loc:{},transit:0}; });
+  S.db.items.forEach(i=>{ const k=key(i.brand,i.sku); idx[k]=i; i._s=(i.sku+' '+i.name+' '+i.cat).toLowerCase(); st[k]={open:(+i.open||0)+(+i.openB||0),in:0,out:0,onOrder:0,hold:0,loc:{},transit:0,book:0,bk:{}}; });
   const OL=openLoc(), ladd=(k,l,q)=>{ const s=st[k]; if(s&&l) s.loc[l]=(s.loc[l]||0)+q; };
   const BL=bgLoc(); S.db.items.forEach(i=>{ const k=key(i.brand,i.sku); ladd(k,OL,+i.open||0); if(+i.openB) ladd(k,BL,+i.openB); });
   S.db.grns.forEach(g=>g.lines.forEach(l=>{ const k=key(g.brand,l.sku); if(st[k]){ st[k].in+= +l.qty||0; ladd(k,g.loc||OL,+l.qty||0); } }));
   S.db.pos.forEach(p=>{ if(NOT_LIVE.includes(p.status)) return; p.lines.forEach(l=>{ const k=key(p.brand,l.sku); if(st[k]) st[k].onOrder+=Math.max(0,(+l.qty||0)-(+l.rcv||0)); }); });
-  (S.db.sales||[]).forEach(sl=>{ if(sl.status==='Cancelled') return; sl.lines.forEach(l=>{ const k=key(l.brand,l.sku); if(st[k]){ st[k].out+= +l.qty||0; ladd(k,sl.loc||OL,-(+l.qty||0)); } }); });
+  (S.db.sales||[]).forEach(sl=>{ if(sl.status==='Cancelled') return; if(sl.type==='Booking'){ if(sl.status==='Booked') sl.lines.forEach(l=>{ const k=key(l.brand,l.sku), q=+l.qty||0; if(st[k]){ st[k].book+=q; st[k].bk[sl.loc]=(st[k].bk[sl.loc]||0)+q; } }); return; } sl.lines.forEach(l=>{ const k=key(l.brand,l.sku); if(st[k]){ st[k].out+= +l.qty||0; ladd(k,sl.loc||OL,-(+l.qty||0)); } }); });
   (S.db.transfers||[]).forEach(t=>{ if(t.status==='Cancelled') return; t.lines.forEach(l=>{ const k=key(l.brand,l.sku), q=+l.qty||0; if(!st[k]) return; ladd(k,t.from,-q); if(t.status==='Received') ladd(k,t.to,q); else st[k].transit+=q; }); });
   for(const k in st) st[k].close = st[k].open + st[k].in - st[k].out;
   S.idx=idx; S.stock=st; S.db.sales=S.db.sales||[]; S.db.sales.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date))); buildTrack();
@@ -1351,7 +1363,7 @@ function vStock(){
    <div class="bar"><input class="in search" id="sq" placeholder="Search code, name or category…" value="${esc(S.stockQ)}">
      <select class="in" id="sfilter"><option value="all">All items</option><option value="instock">In stock</option><option value="zero">Zero stock</option><option value="onorder">On order</option><option value="active">Active only (hide discontinued)</option><option value="hold">Held for client orders</option></select>
      <select class="in" id="sloc"><option value="">All locations</option>${S.db.locs.map(l=>`<option>${esc(l.name)}</option>`).join('')}</select>
-     <button class="btn ghost" onclick="exportStock()">⬇ Excel</button></div>
+     <button class="btn ghost" onclick="showBookings()">📌 Bookings (${liveBookings().length})</button><button class="btn ghost" onclick="exportStock()">⬇ Excel</button></div>
    <div id="stockList"></div>`;
   $('#sq').addEventListener('input',e=>{ S.stockQ=e.target.value; S.stockLimit=60; stockList(); });
   $('#sloc').value=S.stockLoc||''; $('#sloc').addEventListener('change',e=>{ S.stockLoc=e.target.value; S.stockLimit=60; stockList(); });
@@ -1361,18 +1373,63 @@ function vStock(){
 function stockRows(){
   let list=filterItems(S.stockQ,S.stockBrand); const f=S.stockFilter||'all';
   if(f!=='all') list=list.filter(i=>{ const s=S.stock[key(i.brand,i.sku)]; const qq=S.stockLoc?locQty(s,S.stockLoc):s.close; return f==='instock'?qq>0:f==='zero'?qq<=0:f==='active'?!i.disc:f==='hold'?s.hold>0:s.onOrder>0; });
+  const qv=i=>{ const s=S.stock[key(i.brand,i.sku)]; return S.stockLoc?locQty(s,S.stockLoc):s.close; };
+  list=list.slice().sort((a,b)=>qv(b)-qv(a)||String(a.name).localeCompare(String(b.name)));
   return list;
 }
 function stockList(){
   const list=stockRows(), show=list.slice(0,S.stockLimit);
   if(!S.db.items.length){ $('#stockList').innerHTML=`<div class="card empty">No SKUs loaded yet. Admin can import the price lists under <b>Admin → Import</b>.</div>`; return; }
-  $('#stockList').innerHTML = `<div class="muted" style="margin-bottom:8px;font-size:12px">${nf(list.length)} items</div><div class="tscroll"><table class="t cards"><thead><tr><th></th><th>Item</th><th class="num">MRP</th><th class="num">Cost</th><th class="num">Opening</th><th class="num">Inward</th><th class="num">Out (Sold)</th><th class="num">On Order</th><th class="num">Closing</th>${S.admin?'<th></th>':''}</tr></thead><tbody>
-   ${show.map(i=>{ const s=S.stock[key(i.brand,i.sku)]; return `<tr><td class="c-img">${imgHTML(i)}</td>
+  const LN=(S.db.locs||[]).map(l=>l.name), mob=document.body.classList.contains('mobile');
+  const lh=LN.map(n=>`<th class="num">${esc(n.replace(' Warehouse',''))}</th>`).join('');
+  $('#stockList').innerHTML = `<div class="muted" style="margin-bottom:8px;font-size:12px">${nf(list.length)} items · highest stock first</div><div class="tscroll"><table class="t cards"><thead><tr><th></th><th>Item</th><th class="num">MRP</th><th class="num">Cost</th>${lh}<th class="num">On Order</th><th class="num">Total Stock</th><th class="num">Booked</th><th></th>${S.admin?'<th></th>':''}</tr></thead><tbody>
+   ${show.map(i=>{ const s=S.stock[key(i.brand,i.sku)], sk=esc(i.sku).replace(/'/g,"\\'"); const free=freeQty(s);
+     const lcells=LN.map(n=>{ const q=(s.loc&&s.loc[n])||0, b=(s.bk&&s.bk[n])||0; return `<td class="num c-hide"><b class="${q>0?'ok':'low'}">${nf(q)}</b>${b?`<div class="muted" style="font-size:10.5px;color:var(--amber)">${nf(b)} booked</div>`:''}</td>`; }).join('');
+     return `<tr><td class="c-img">${imgHTML(i)}</td>
      <td><div class="iname">${esc(i.name)}</div><div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span> <span class="muted" style="font-size:11.5px">${esc(i.cat)}</span>${discTag(i)}</div></td>
-     <td class="num c-hide">${inr(i.mrp)}</td><td class="num c-hide">${inr(i.cost)}</td><td class="num c-hide">${nf(s.open)}</td><td class="num c-hide">${nf(s.in)}</td><td class="num c-hide">${s.out?nf(s.out):'–'}</td><td class="num c-hide">${s.onOrder?nf(s.onOrder):'–'}</td>
-     <td class="num"><span class="${s.close>0?'ok':'low'}">${nf(s.close)}</span>${locLine(s)}${s.hold?`<div class="muted" style="font-size:11px;white-space:nowrap">${nf(Math.max(0,s.close-s.hold))} free · <b style="color:var(--amber)">${nf(s.hold)} held for clients</b></div>`:''}${holdersHTML(s)}${document.body.classList.contains('mobile')?`<div class="muted" style="font-size:11px">MRP ${inr(i.mrp)}${s.out?' · '+s.out+' sold':''}${s.onOrder?' · '+s.onOrder+' on order':''}</div>`:''}</td>
-     ${S.admin?`<td><button class="btn ghost sm" onclick="editItem('${esc(i.brand)}','${esc(i.sku).replace(/'/g,"\\'")}')">Edit</button></td>`:''}</tr>`; }).join('')}
+     <td class="num c-hide">${inr(i.mrp)}</td><td class="num c-hide">${inr(i.cost)}</td>${lcells}<td class="num c-hide">${s.onOrder?nf(s.onOrder):'–'}</td>
+     <td class="num"><span class="${s.close>0?'ok':'low'}">${nf(s.close)}</span>${mob?locLine(s):''}${s.hold?`<div class="muted" style="font-size:11px;white-space:nowrap">${nf(Math.max(0,s.close-s.hold))} free · <b style="color:var(--amber)">${nf(s.hold)} held for clients</b></div>`:''}${holdersHTML(s)}${mob?`<div class="muted" style="font-size:11px">MRP ${inr(i.mrp)}${s.onOrder?' · '+s.onOrder+' on order':''}${s.book?' · <b style="color:var(--amber)">'+s.book+' booked</b>':''}</div>`:''}</td>
+     <td class="num c-hide">${s.book?`<b style="color:var(--amber)">${nf(s.book)}</b>`:'–'}</td>
+     <td class="num">${free>0?`<button class="btn gold sm" onclick="bookStock('${esc(i.brand)}','${sk}')">Book</button>`:`<span class="muted" style="font-size:11px">No free stock</span>`}</td>
+     ${S.admin?`<td><button class="btn ghost sm" onclick="editItem('${esc(i.brand)}','${sk}')">Edit</button></td>`:''}</tr>`; }).join('')}
    </tbody></table></div>${list.length>show.length?`<div class="more"><button class="btn ghost" onclick="S.stockLimit+=100;stockList()">Show more (${nf(list.length-show.length)} left)</button></div>`:''}`;
+}
+/* ===== Stock booking (salesperson reserves free stock for a client) ===== */
+const isBooking = x => x && x.type==='Booking';
+const liveBookings = () => (S.db.sales||[]).filter(x=>isBooking(x) && x.status==='Booked');
+function freeQty(s,loc){ if(!s) return 0; if(loc) return Math.max(0,locQty(s,loc)-((s.bk&&s.bk[loc])||0)); return Math.max(0,s.close-(s.hold||0)-(s.book||0)); }
+function bookStock(b,sku){
+  const i=S.idx[key(b,sku)]; if(!i) return; if(!S.user) return toast('Please log in first',true);
+  const s=S.stock[key(b,sku)], LN=(S.db.locs||[]).map(l=>l.name).filter(n=>Math.min(freeQty(s,n),freeQty(s))>0);
+  if(!LN.length) return toast('No free stock available to book',true);
+  const first=(S.stockLoc&&LN.includes(S.stockLoc))?S.stockLoc:LN.slice().sort((a,c)=>freeQty(s,c)-freeQty(s,a))[0];
+  S._bk={b,sku};
+  modal('Book stock', `<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">${imgHTML(i,'thumb')}<div><div class="iname">${esc(i.name)}</div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span></div></div>
+   <div class="fgrid"><label class="f">Godown<select class="in" id="bk_loc" onchange="bkLocChange()">${LN.map(n=>`<option value="${esc(n)}" ${n===first?'selected':''}>${esc(n)} (${nf(Math.min(freeQty(s,n),freeQty(s)))} free)</option>`).join('')}</select></label>
+   <label class="f">Quantity<input class="in" id="bk_qty" type="number" min="1" value="1" inputmode="numeric"></label>
+   <label class="f" style="grid-column:span 2">Client name *<input class="in" id="bk_client" placeholder="e.g. Mr. Baruah"></label>
+   <label class="f" style="grid-column:span 2">Note<input class="in" id="bk_note" placeholder="optional – site / expected pickup date"></label></div>
+   <div class="muted" id="bk_max" style="font-size:12px;margin-top:6px">Booked stock is reserved for you and shows to everyone as booked. Release it if the client drops out.</div>
+   <div class="actions"><button class="btn gold" onclick="saveBooking()">Book stock</button></div>`);
+  bkLocChange();
+}
+function bkLocChange(){ const q=S._bk; if(!q) return; const s=S.stock[key(q.b,q.sku)], loc=$('#bk_loc').value, mx=Math.min(freeQty(s,loc),freeQty(s)); const e=$('#bk_qty'); e.max=mx; if(+e.value>mx) e.value=mx; }
+async function saveBooking(){
+  const q=S._bk; if(!q) return; const s=S.stock[key(q.b,q.sku)], i=S.idx[key(q.b,q.sku)], loc=$('#bk_loc').value, qty=parseInt($('#bk_qty').value)||0, client=($('#bk_client').value||'').trim();
+  if(qty<1) return toast('Enter the quantity to book',true);
+  { const mx=Math.min(freeQty(s,loc),freeQty(s)); if(qty>mx) return toast('Only '+mx+' free to book at '+loc,true); }
+  if(!client) return toast('Enter the client name',true);
+  const bk={type:'Booking',status:'Booked',loc,date:today(),client,sp:S.user,by:S.user,remarks:($('#bk_note').value||'').trim(),lines:[{brand:i.brand,sku:i.sku,name:i.name,qty,cost:+i.cost||0,mrp:+i.mrp||0}]};
+  try{ busy(true,'Booking…'); await API.call('createBooking',{bk}); closeModal(); await refresh(true); toast('Booked '+qty+' × '+i.sku+' for '+client); }catch(e){ toast(e.message,true); } finally{ busy(false); }
+}
+function showBookings(){
+  const L=liveBookings().slice().sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
+  modal('Active bookings ('+L.length+')', L.length?`<div class="tscroll"><table class="t"><thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th>Godown</th><th>Client</th><th>Booked by</th><th></th></tr></thead><tbody>${L.map(x=>{ const l=x.lines[0]||{}; const can=S.admin||S.head||x.by===S.user;
+    return `<tr><td>${fdate(x.date)}</td><td><div class="iname">${esc(l.name)}</div><span class="sku">${esc(l.sku)}</span></td><td class="num"><b>${nf(l.qty)}</b></td><td>${esc((x.loc||'').replace(' Warehouse',''))}</td><td>${esc(x.client||'')}${x.remarks?`<div class="muted" style="font-size:11px">${esc(x.remarks)}</div>`:''}</td><td>${esc(x.sp||x.by||'')}</td><td>${can?`<button class="btn ghost sm" onclick="releaseBooking('${esc(x.no)}')">Release</button>`:''}</td></tr>`; }).join('')}</tbody></table></div>`:'<div class="empty">No active bookings.</div>');
+}
+async function releaseBooking(no){
+  if(!confirm('Release this booking? The stock becomes free for everyone.')) return;
+  try{ busy(true,'Releasing…'); await API.call('releaseBooking',{no,by:S.user}); closeModal(); await refresh(true); toast('Booking released'); }catch(e){ toast(e.message,true); } finally{ busy(false); }
 }
 function exportStock(){
   const rows=stockRows().map(i=>{ const s=S.stock[key(i.brand,i.sku)]; return {Brand:i.brand,'Item Code':i.sku,Description:i.name,Category:i.cat,MRP:i.mrp,Cost:i.cost,Opening:s.open,Inward:s.in,'Out (Sold)':s.out,'On Order':s.onOrder,Closing:s.close,'Held for Clients':s.hold||0,'Held By (Salesperson / Client / PO)':(s.holders||[]).map(h=>h.sp+' – '+h.q+' ('+(h.client||'Client')+', '+h.po+')').join('; '),...Object.fromEntries(S.db.locs.map(l=>[l.name,locQty(s,l.name)])),'In Transit':s.transit,'Held for Clients':s.hold,'Free Stock':s.close-s.hold,'Closing Value':s.close*(+i.cost||0)}; });
@@ -2032,7 +2089,7 @@ function tmpl(mode){ const t={items:[{Brand:'JAQUAR','Item Code':'ALD-CHR-...',D
 const jq = x => esc(x).replace(/'/g,"\\'");
 const dayDiff = (a,b) => { if(!a||!b) return null; const x=new Date(String(a).slice(0,10)+'T00:00:00'), y=new Date(String(b).slice(0,10)+'T00:00:00'); if(isNaN(x)||isNaN(y)) return null; return Math.max(0,Math.round((y-x)/864e5)); };
 const spName = p => (p.raisedBy&&p.raisedBy.length) ? p.raisedBy.join(', ') : (p.by||'');
-const liveSales = () => (S.db.sales||[]).filter(s=>s.status!=='Cancelled');
+const liveSales = () => (S.db.sales||[]).filter(s=>s.status!=='Cancelled' && s.type!=='Booking');
 const ageCls = d => d>30?'r':d>15?'a':'g';
 const ageTag = d => `<span class="age ${ageCls(d)}">${d}d</span>`;
 
@@ -2153,11 +2210,11 @@ function saleForm(){
 function saleRes(){
   const s=S.sale, el=$('#s_res'); if(!el) return; if(!s.q.trim()){ el.innerHTML=''; return; }
   const list=filterItems(s.q,'ALL').slice(0,8);
-  el.innerHTML=list.map(i=>{ const st=S.stock[key(i.brand,i.sku)], free=Math.max(0,Math.min(locQty(st,s.loc),st.close-st.hold));
+  el.innerHTML=list.map(i=>{ const st=S.stock[key(i.brand,i.sku)], free=Math.max(0,Math.min(freeQty(st,s.loc),st.close-st.hold-(st.book||0)));
     return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)">${imgHTML(i)}<div style="flex:1"><div class="iname">${esc(i.name)}</div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span> <span class="muted" style="font-size:11.5px">Free at ${esc(s.loc)} <b class="${free>0?'ok':'low'}">${nf(free)}</b>${locLine(st).replace(/<div[^>]*>/,'<br><span>').replace('</div>','</span>')}${st.hold?` · ${nf(st.hold)} held for clients`:''}</span></div><button class="btn sm gold" ${free>0?'':'disabled'} onclick="saleAdd('${jq(i.brand)}','${jq(i.sku)}')">+ Add</button></div>`; }).join('')||'<div class="muted" style="padding:8px">No match</div>';
 }
 function saleAdd(brand,sku){
-  const s=S.sale, k=key(brand,sku), i=S.idx[k], st=S.stock[k]; if(!i) return; const free=Math.max(0,Math.min(locQty(st,s.loc),st.close-st.hold));
+  const s=S.sale, k=key(brand,sku), i=S.idx[k], st=S.stock[k]; if(!i) return; const free=Math.max(0,Math.min(freeQty(st,s.loc),st.close-st.hold-(st.book||0)));
   let l=s.lines.find(x=>x.brand===i.brand&&x.sku===i.sku);
   if(l){ if(l.qty>=free) return toast('Only '+free+' free in stock',true); l.qty++; l.max=free; }
   else s.lines.push({brand:i.brand,sku:i.sku,name:i.name,qty:1,max:free,cost:+i.cost||0,mrp:+i.mrp||0,poNo:''});
@@ -2183,7 +2240,7 @@ async function saveSale(){
   if(s.date>today()) return toast('Sale date cannot be in the future',true);
   for(const l of s.lines){ const k=key(l.brand,l.sku); let mx;
     if(s.type==='Client'){ const r=S.track.find(x=>x.po===s.poNo&&key(x.brand,x.sku)===k); mx=r?r.wh:0; }
-    else { const st=S.stock[k]; mx=st?Math.max(0,Math.min(locQty(st,s.loc),st.close-st.hold)):0; }
+    else { const st=S.stock[k]; mx=st?Math.max(0,Math.min(freeQty(st,s.loc),st.close-st.hold-(st.book||0))):0; }
     if(s.type==='Client'){ const lq=locQty(S.stock[k],s.loc); if(l.qty>lq) return toast(l.sku+': only '+lq+' at '+s.loc+' - transfer stock there or change the location',true); }
     if(l.qty>mx) return toast(l.sku+': only '+mx+' available now – please adjust',true); }
   const sale={loc:s.loc,date:s.date,type:s.type,client:s.type==='Client'?s.client:(s.client||'').trim(),poNo:s.type==='Client'?s.poNo:'',sp:s.sp,billFrom:s.billFrom,inv:s.inv,ref:s.inv,remarks:(s.remarks||'').trim(),by:S.user,
@@ -2194,7 +2251,7 @@ async function saveSale(){
 function saleLog(){
   const q=(S.saleQ||'').toLowerCase(), ty=S.saleTy||'ALL', mob=document.body.classList.contains('mobile');
   const tq=x=>x.lines.reduce((a,l)=>a+(+l.qty||0),0);
-  const list=(S.db.sales||[]).filter(x=>(ty==='ALL'||x.type===ty)&&(!q||(x.no+' '+(x.client||'')+' '+(x.sp||'')+' '+x.by+' '+(x.poNo||'')+' '+(x.ref||'')+' '+(x.inv||'')+' '+x.lines.map(l=>l.sku+' '+l.name).join(' ')).toLowerCase().includes(q)));
+  const list=(S.db.sales||[]).filter(x=>x.type!=='Booking'&&(ty==='ALL'||x.type===ty)&&(!q||(x.no+' '+(x.client||'')+' '+(x.sp||'')+' '+x.by+' '+(x.poNo||'')+' '+(x.ref||'')+' '+(x.inv||'')+' '+x.lines.map(l=>l.sku+' '+l.name).join(' ')).toLowerCase().includes(q)));
   const typ=x=>x.type==='Client'?'<span class="tag" style="background:#E3F1FB;color:#125A8A">CLIENT ORDER</span>':'<span class="tag" style="background:#EEF1F6">STOCK SALE</span>';
   const sttag=x=>x.status==='Cancelled'?'<span class="tag st-cancelled">CANCELLED</span>':'<span class="tag st-received">STOCK OUT</span>';
   $('#saleBody').innerHTML=`<div class="bar"><input class="in search" id="slq" placeholder="Search sale no, invoice no, client, salesperson, item…" value="${esc(S.saleQ||'')}"><select class="in" id="slt"><option value="ALL">All types</option><option value="Client">Client order</option><option value="Stock">Stock sale</option></select></div>
