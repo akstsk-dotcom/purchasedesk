@@ -782,6 +782,14 @@ table.t thead th{position:sticky;top:0;background:#fff;z-index:1}
 .modal .mbox{border-radius:18px}
 body.mobile .modal{padding:0;align-items:flex-end}
 body.mobile .modal .mbox{width:100%;max-width:none;border-radius:20px 20px 0 0;max-height:92vh;overflow:auto}
+
+/* ===== Mobile search: full-width, clear, sticky ===== */
+.bar input.search{flex:1 1 260px;min-width:220px}
+body.mobile .bar input.search,body.mobile input.search{flex:1 1 100%;width:100%;min-width:100%;max-width:none;height:50px;font-size:16px;padding:0 16px 0 44px;border:2px solid var(--navy);border-radius:14px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%230B2545' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E") no-repeat 14px center;box-shadow:0 2px 10px rgba(11,37,69,.10)}
+body.mobile input.search::placeholder{color:#6B7684;font-weight:600}
+body.mobile #sq{position:sticky;top:6px;z-index:15}
+body.mobile .bar select.in{flex:1 1 calc(50% - 6px);min-width:0}
+body.mobile .bar .btn{flex:1 1 calc(50% - 6px)}
 </style>
 </head>
 <body>
@@ -1348,7 +1356,7 @@ function setStockBrand(b){ S.stockBrand=b; S.stockLimit=60; vStock(); }
 function vStock(){
   $('#view').innerHTML = `<h2 class="sec">Live Stock</h2>
    <div class="bar">${brandChips(S.stockBrand,'setStockBrand',true)}</div>
-   <div class="bar"><input class="in search" id="sq" placeholder="Search code, name or category…" value="${esc(S.stockQ)}">
+   <div class="bar"><input class="in search" id="sq" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="characters" placeholder="Search item code or name…" value="${esc(S.stockQ)}">
      <select class="in" id="sfilter"><option value="all">All items</option><option value="instock">In stock</option><option value="zero">Zero stock</option><option value="onorder">On order</option><option value="active">Active only (hide discontinued)</option><option value="hold">Held for client orders</option></select>
      <select class="in" id="sloc"><option value="">All locations</option>${S.db.locs.map(l=>`<option>${esc(l.name)}</option>`).join('')}</select>
      <button class="btn ghost" onclick="exportStock()">⬇ Excel</button></div>
