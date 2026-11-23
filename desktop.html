@@ -819,6 +819,7 @@ const CONFIG = {
   ADMIN_PASS_DEMO: '8943' // demo mode only; live mode password lives in Script Properties
 };
 const ICON = {
+  incentive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M10 8c3 0 4 1.5 4 2.5S13 13 10 13l4 4"/></svg>',
   sale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="M3.29 7 12 12l8.71-5"/><path d="M12 22V12"/></svg>',
   report:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
@@ -887,7 +888,7 @@ function masterItems(){ // fresh objects every call
   return MASTER.items.map(r=>({brand:MASTER.brands[r[0]],sku:r[1],name:r[2],cat:r[3],mrp:+r[4]||0,cost:0,gst:+r[5]||0,img:r[6]?(r[6][0]==='~'?S7+r[6].slice(1):r[6]):'',open:0,openB:BORAGAON_QTY[String(r[1]).toUpperCase()]||0,disc:r[7]||'',alt:r[8]||''}));
 }
 function discTag(i){ if(!i||!i.disc) return ''; return ` <span class="tag st-cancelled">${i.disc==='P'?'DISCONTINUED':'BEING DISCONTINUED'}</span>${i.alt?` <span class="muted" style="font-size:11px">Alt: <b>${esc(i.alt)}</b></span>`:''}`; }
-const ITEM_F=['name','cat','mrp','cost','gst','img','open','openB'];
+const ITEM_F=['name','cat','mrp','cost','gst','img','open','openB','slow'];
 const Local = {
   KEY:'sw_demo_db2',
   load(){ try{ const d = JSON.parse(ls(this.KEY)||'null'); if(d) return d; }catch(e){} return {ov:{}, extra:[], users:[{name:'Ankit'}], pos:[], grns:[], seq:{}}; },
@@ -1208,10 +1209,10 @@ addEventListener('resize', ()=>{ const was=document.body.classList.contains('mob
 /* ===== Mobile grouped navigation (iPhone-style launcher) ===== */
 ICON.transfer='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13"/><path d="m16 3 4 4-4 4"/><path d="M17 17H4"/><path d="m8 13-4 4 4 4"/></svg>';
 ICON.more='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>';
-const GROUPS=[['orders','Orders','Stock & Orders','stock',['stock','newpo','pos']],['wh','Warehouse','Warehouse','grn',['grn','sale','transfer']],['more','More','Claims & Reports','more',['claims','report']],['admin','Admin','Admin','admin',['admin']]];
-const TICON={stock:'stock',newpo:'po',pos:'list',grn:'grn',sale:'sale',transfer:'transfer',claims:'claim',report:'report',admin:'admin'};
-const TCOL={stock:['#2E6BE6','#6BA4FF'],newpo:['#C9A227','#EFCB62'],pos:['#0B2545','#3A5A86'],grn:['#1E9E5A','#55D08F'],sale:['#E8772E','#FFAA66'],transfer:['#0E9AA7','#4FCBD6'],claims:['#D64545','#FF8383'],report:['#7A4BD6','#B093FF'],admin:['#4A5568','#8E9BB0']};
-const TLBL={stock:'Stock',newpo:'New PO',pos:'PO List',grn:'GRN / Inward',sale:'Sale',transfer:'Transfer',claims:'Claims',report:'Report',admin:'Admin'};
+const GROUPS=[['orders','Orders','Stock & Orders','stock',['stock','newpo','pos']],['wh','Warehouse','Warehouse','grn',['grn','sale','transfer']],['more','More','Claims & Reports','more',['claims','report','incentive']],['admin','Admin','Admin','admin',['admin']]];
+const TICON={stock:'stock',newpo:'po',pos:'list',grn:'grn',sale:'sale',transfer:'transfer',claims:'claim',report:'report',incentive:'incentive',admin:'admin'};
+const TCOL={stock:['#2E6BE6','#6BA4FF'],newpo:['#C9A227','#EFCB62'],pos:['#0B2545','#3A5A86'],grn:['#1E9E5A','#55D08F'],sale:['#E8772E','#FFAA66'],transfer:['#0E9AA7','#4FCBD6'],claims:['#D64545','#FF8383'],report:['#7A4BD6','#B093FF'],incentive:['#C9A227','#EFCB62'],admin:['#4A5568','#8E9BB0']};
+const TLBL={stock:'Stock',newpo:'New PO',pos:'PO List',grn:'GRN / Inward',sale:'Sale',transfer:'Transfer',claims:'Claims',report:'Report',incentive:'Incentive',admin:'Admin'};
 const isMob=()=>document.body.classList.contains('mobile');
 function grpOf(t){ const g=GROUPS.find(g=>g[4].includes(t)); return g?g[0]:null; }
 function accTabs(g){ return g[4].filter(t=>canTab(t)); }
@@ -1232,14 +1233,14 @@ function renderHub(){
   const g=GROUPS.find(x=>x[0]===S.hub), tabs=accTabs(g);
   $('#view').innerHTML=`<div class="hub"><div class="hubtitle">${esc(g[2])}</div><div class="hubsub">Tap an icon to open</div><div class="icogrid">${tabs.map(t=>{ const b=tabBadge(t); return `<button class="ai" onclick="go('${t}')"><span class="aic" style="background:linear-gradient(145deg,${TCOL[t][1]},${TCOL[t][0]})">${ICON[TICON[t]]}${b?`<span class="aib">${b}</span>`:''}</span><span class="ail">${esc(TLBL[t])}</span></button>`; }).join('')}</div></div>`;
 }
-const TABS = [['home','Home','home'],['stock','Stock','stock'],['newpo','New PO','po'],['pos','PO List','list'],['grn','GRN / Inward','grn'],['sale','Sale','sale'],['transfer','Transfer','grn'],['claims','Claims','claim'],['report','Report','report'],['admin','Admin','admin']];
+const TABS = [['home','Home','home'],['stock','Stock','stock'],['newpo','New PO','po'],['pos','PO List','list'],['grn','GRN / Inward','grn'],['sale','Sale','sale'],['transfer','Transfer','grn'],['claims','Claims','claim'],['report','Report','report'],['incentive','Incentive','incentive'],['admin','Admin','admin']];
 function renderTabs(){
   if(isMob()){ const act=S.hub||(S.tab!=='home'?S.grp:null);
     $('#tabs').innerHTML=`<button class="tab ${!S.hub&&S.tab==='home'?'on':''}" onclick="go('home')">${ICON.home}<span>Home</span></button>`+GROUPS.filter(g=>accTabs(g).length).map(g=>{ const b=accTabs(g).reduce((a,t)=>a+tabBadge(t),0); return `<button class="tab ${act===g[0]?'on':''}" onclick="openGrp('${g[0]}')">${ICON[g[3]]}<span>${g[1]}${b?` <span class="badge">${b}</span>`:''}</span></button>`; }).join(''); return; }
   $('#tabs').innerHTML = TABS.filter(t=>canTab(t[0])).map(t=>`<button class="tab ${S.tab===t[0]?'on':''}" onclick="go('${t[0]}')">${ICON[t[2]]}<span>${document.body.classList.contains('mobile')&&t[0]==='grn'?'GRN':t[1]}${t[0]==='pos'&&canApprove()&&pendCount()?` <span class="badge">${pendCount()}</span>`:''}${t[0]==='report'&&oldLying()?` <span class="badge">${oldLying()}</span>`:''}${t[0]==='claims'&&S.db.claims.some(c=>c.status!=='Received')?` <span class="badge">${S.db.claims.filter(c=>c.status!=='Received').length}</span>`:''}</span></button>`).join('');
 }
 function canApprove(){ return S.head || S.admin; }
-const TAB_ROLES = {home:'*',stock:'*',newpo:['sales','head'],pos:'*',grn:['warehouse','head'],sale:['warehouse','head'],transfer:['warehouse','head'],claims:['warehouse','head'],report:'*',admin:['head']};
+const TAB_ROLES = {home:'*',stock:'*',newpo:['sales','head'],pos:'*',grn:['warehouse','head'],sale:['warehouse','head'],transfer:['warehouse','head'],claims:['warehouse','head'],report:'*',incentive:'*',admin:['head']};
 function canTab(t){ if(S.admin) return true; const r=TAB_ROLES[t]; return r==='*' || !!(r && r.includes(S.role)); }
 const ROLE_LBL = {sales:'Salesperson',warehouse:'Warehouse team',head:'Team head'};
 function pendCount(){ return S.db.pos.filter(p=>p.status==='Pending').length; }
@@ -1253,7 +1254,7 @@ function render(){
   $('#modePill').innerHTML = API.live()?'<span class="pill live">● LIVE</span>':(document.body.classList.contains('mobile')?'<span class="pill demo">DEMO</span>':'<span class="pill demo">DEMO MODE</span>');
   renderTabs(); renderBack();
   if(isMob()&&S.hub){ renderHub(); return; }
-  ({home:vHome,stock:vStock,newpo:vNewPO,pos:vPOs,grn:vGRN,sale:vSale,transfer:vTransfer,claims:vClaims,report:vReport,admin:vAdmin})[S.tab]();
+  ({home:vHome,stock:vStock,newpo:vNewPO,pos:vPOs,grn:vGRN,sale:vSale,transfer:vTransfer,claims:vClaims,report:vReport,incentive:vIncentive,admin:vAdmin})[S.tab]();
 }
 function sized(u,w){ return /scene7\.com\/is\/image\//.test(u) && !u.includes('?') ? u+'?wid='+w+'&hei='+w+'&fit=constrain' : u; }
 function imgHTML(it, cls='thumb'){ const src = it && sized(API.photo(it.img),160);
@@ -1347,6 +1348,59 @@ function vHome(){
     <div class="card"><h2 class="sec">Recent activity</h2>${act.length?act.map(a=>`<div style="padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px">${a.h}<div class="muted" style="font-size:11.5px">${fdate(a.t)}</div></div>`).join(''):'<div class="empty">No POs or GRNs yet. Start with <b>New PO</b>.</div>'}</div>
     <div class="card"><h2 class="sec">POs by salesperson</h2>${Object.keys(byUser).length?`<div class="tscroll"><table class="t"><thead><tr><th>Name</th><th class="num">POs</th><th class="num">Qty</th><th class="num">Cost Value</th></tr></thead><tbody>${Object.entries(byUser).sort((a,b)=>b[1].n-a[1].n).map(([n,u])=>`<tr><td>${esc(n)}</td><td class="num">${u.n}</td><td class="num">${nf(u.q)}</td><td class="num">${inr(u.v)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No POs yet</div>'}</div>
   </div>`;
+}
+
+/* ===== Incentive scheme (Sales & Godown teams) ===== */
+const INC_JQ=0.25, INC_SLOW=1.5;
+function incRate(type,l){ if(type!=='Stock') return 0; const it=S.idx[key(l.brand,l.sku)]||{}; return it.slow?INC_SLOW:(String(l.brand).toUpperCase()==='JAQUAR'?INC_JQ:0); }
+function incLines(){
+  const out=[]; liveSales().forEach(x=>{ if(x.type!=='Stock') return; (x.lines||[]).forEach(l=>{ const ir=+l.ir||0, v=+l.val||0; if(ir>0&&v>0) out.push({m:String(x.date).slice(0,7),date:x.date,no:x.no,inv:x.inv||'',client:x.client||'',sp:x.sp||x.by||'',brand:l.brand,sku:l.sku,name:l.name,val:v,ir,tot:v*ir/100,sales:v*ir/200,god:v*ir/200}); }); });
+  return out;
+}
+function incBars(items,max){ return items.map(([lbl,val,sub])=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><div style="width:110px;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lbl)}</div><div style="flex:1;background:#EEF0F3;border-radius:8px;height:22px;overflow:hidden"><div style="width:${max>0?Math.max(val>0?3:0,val/max*100):0}%;height:100%;background:linear-gradient(90deg,#C9A227,#EFCB62);border-radius:8px"></div></div><div style="width:92px;text-align:right;font-weight:700;font-size:13px">${inr(val,2)}</div></div>${sub?`<div class="muted" style="font-size:11px;margin:-4px 0 4px 120px">${sub}</div>`:''}`).join(''); }
+function vIncentive(){
+  const adm=S.admin, nm=s=>String(s||'').trim().toLowerCase(), me=nm(S.user), isWh=!adm&&S.role==='warehouse';
+  const all=incLines(), t0=today().slice(0,7), mon=S.incM||t0;
+  const months=[...new Set([t0,...all.map(r=>r.m)])].sort().reverse();
+  const rows=all.filter(r=>r.m===mon), mine=adm?rows:rows.filter(r=>nm(r.sp)===me);
+  const sum=(a,f)=>a.reduce((s,r)=>s+r[f],0), mlbl=m=>{ const [y,mm]=m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mm-1]+' '+y; };
+  const whN=Math.max(1,(S.db.users||[]).filter(u=>u.role==='warehouse').length), pool=sum(rows,'god');
+  const scheme=`<div class="card" style="margin-bottom:16px"><h2 class="sec">Incentive scheme – Sales &amp; Godown teams</h2>
+   <div class="note" style="margin-bottom:10px">Incentive is calculated on eligible sales value <b>excluding GST</b>.</div>
+   <div class="tscroll"><table class="t"><thead><tr><th>Eligible sales</th><th class="num">Total</th><th class="num">Sales team</th><th class="num">Godown team</th></tr></thead><tbody>
+    <tr><td>Jaquar and Parryware items from existing warehouse stock</td><td class="num"><b>0.25%</b></td><td class="num">0.125%</td><td class="num">0.125%</td></tr>
+    <tr><td>Slow-moving CP fittings and sanitaryware identified by Rajiv</td><td class="num"><b>1.50%</b></td><td class="num">0.75%</td><td class="num">0.75%</td></tr></tbody></table></div>
+   <div style="margin-top:12px;font-size:13px;line-height:1.55"><b>Eligibility</b><br>Jaquar and Parryware qualify only when sold from our existing warehouse stock. Items procured from HMC or any other vendor to fulfil a sale are ineligible.<br>For Kohler, Grohe, Colston and similar brands, only the specific slow-moving items identified by Rajiv qualify for the 1.50% incentive.</div>
+   <div class="muted" style="margin-top:10px;font-size:12.5px"><b>Examples:</b> ₹1,00,000 Jaquar/Parryware stock sales = ₹250 (Sales ₹125 + Godown ₹125). ₹1,00,000 eligible slow-moving sales = ₹1,500 (Sales ₹750 + Godown ₹750).</div></div>`;
+  const msel=`<div class="bar"><select class="in" onchange="S.incM=this.value;vIncentive()">${months.map(m=>`<option value="${m}" ${m===mon?'selected':''}>${mlbl(m)}</option>`).join('')}</select>${adm?`<button class="btn ghost" onclick="incExport()">⬇ Excel</button>`:''}</div>`;
+  let body='';
+  if(isWh){
+    body=`<div class="card"><h2 class="sec">Godown team incentive – ${mlbl(mon)}</h2><div class="grid kpis"><div class="kpi"><div class="l">Godown pool</div><div class="v">${inr(pool,2)}</div><div class="s">Half of total incentive</div></div><div class="kpi"><div class="l">Equal share per person</div><div class="v">${inr(pool/whN,2)}</div><div class="s">${whN} godown login${whN>1?'s':''}</div></div></div></div>`;
+  } else {
+    const bySp={}; rows.forEach(r=>{ const k=r.sp||'—'; const o=bySp[k]||(bySp[k]={v:0,s:0}); o.v+=r.val; o.s+=r.sales; });
+    let chart;
+    if(adm){ const L=Object.entries(bySp).sort((a,b)=>b[1].s-a[1].s); chart=L.length?incBars(L.map(([n,o])=>[n,o.s,'Eligible sales '+inr(o.v)]),Math.max(...L.map(x=>x[1].s))):'<div class="empty">No eligible sales recorded this month.</div>'; }
+    else { const ms=[]; for(let i=5;i>=0;i--){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i); ms.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
+      const L=ms.map(m=>[mlbl(m),sum(all.filter(r=>r.m===m&&nm(r.sp)===me),'sales')]); chart=incBars(L,Math.max(...L.map(x=>x[1]))); }
+    const kp=adm?`<div class="grid kpis"><div class="kpi"><div class="l">Eligible sales (excl GST)</div><div class="v">${inr(sum(rows,'val'))}</div></div><div class="kpi"><div class="l">Sales team incentive</div><div class="v">${inr(sum(rows,'sales'),2)}</div></div><div class="kpi"><div class="l">Godown team pool</div><div class="v">${inr(pool,2)}</div></div><div class="kpi"><div class="l">Total incentive</div><div class="v">${inr(sum(rows,'tot'),2)}</div></div></div>`
+      :`<div class="grid kpis"><div class="kpi"><div class="l">Your eligible sales (excl GST)</div><div class="v">${inr(sum(mine,'val'))}</div></div><div class="kpi"><div class="l">Your incentive – ${mlbl(mon)}</div><div class="v">${inr(sum(mine,'sales'),2)}</div></div></div>`;
+    const det=mine.length?`<div class="tscroll"><table class="t"><thead><tr><th>Date</th><th>Invoice</th>${adm?'<th>Salesperson</th>':''}<th>Item</th><th class="num">Sale value</th><th class="num">Rate</th><th class="num">${adm?'Sales share':'Your incentive'}</th></tr></thead><tbody>${mine.sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(r=>`<tr><td>${fdate(r.date)}</td><td>${esc(r.inv)}</td>${adm?`<td>${esc(r.sp)}</td>`:''}<td><div class="iname">${esc(r.name)}</div><span class="tag">${esc(r.brand)}</span> <span class="sku">${esc(r.sku)}</span></td><td class="num">${inr(r.val)}</td><td class="num">${r.ir}%</td><td class="num"><b>${inr(r.sales,2)}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">No eligible sales recorded for you in '+mlbl(mon)+'.</div>';
+    body=`<div class="card" style="margin-bottom:16px"><h2 class="sec">${adm?'Incentive chart – all salespersons':'Your incentive chart'} · ${mlbl(mon)}</h2>${kp}<div style="margin-top:12px">${chart}</div>${adm?'':'<div class="muted" style="font-size:11.5px;margin-top:8px">Only your own incentive is shown here. Last 6 months.</div>'}</div><h2 class="sec">${adm?'All eligible sale lines':'Your eligible sales'}</h2>${det}`;
+    if(adm){ const sl=(S.db.items||[]).filter(i=>i.slow), q=S.slowQ||'', res=q.trim()?filterItems(q,'ALL').slice(0,8):[];
+      body+=`<div class="card" style="margin-top:18px"><h2 class="sec">Slow-moving items (1.50%) – identified by Rajiv</h2><div class="muted" style="font-size:12px;margin-bottom:8px">Only these items (Kohler, Grohe, Colston, CP fittings, sanitaryware etc.) earn 1.50% when sold from stock. Jaquar stock sales earn 0.25% automatically.</div>
+       <input class="in search" id="slowq" placeholder="Search item code or name to mark as slow-moving…" value="${esc(q)}">
+       ${res.map(i=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)"><div style="flex:1"><div class="iname">${esc(i.name)}</div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span></div>${i.slow?'<span class="tag">SLOW</span>':`<button class="btn gold sm" onclick="setSlow('${esc(i.brand)}','${esc(i.sku).replace(/'/g,"\\'")}',1)">Mark slow-moving</button>`}</div>`).join('')}
+       <div style="margin-top:10px">${sl.length?sl.map(i=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #EEF0F3"><div style="flex:1"><div class="iname">${esc(i.name)}</div><span class="tag">${esc(i.brand)}</span> <span class="sku">${esc(i.sku)}</span></div><button class="btn ghost sm" onclick="setSlow('${esc(i.brand)}','${esc(i.sku).replace(/'/g,"\\'")}',0)">Remove</button></div>`).join(''):'<div class="muted" style="font-size:12.5px">No slow-moving items tagged yet.</div>'}</div></div>`; }
+  }
+  $('#view').innerHTML=`<h2 class="sec">Incentive</h2>${scheme}${msel}${body}`;
+  const sq=$('#slowq'); if(sq) sq.addEventListener('input',e=>{ S.slowQ=e.target.value; const p=e.target.selectionStart; vIncentive(); const n=$('#slowq'); n.focus(); n.setSelectionRange(p,p); });
+}
+async function setSlow(b,sku,v){
+  try{ busy(true); await API.call('updateItem',{brand:b,sku,slow:v,admin:adminPass()}); S.idx[key(b,sku)].slow=v; vIncentive(); toast(v?'Marked slow-moving':'Removed from slow-moving'); }catch(e){ toast(e.message,true); } finally{ busy(false); }
+}
+function incExport(){
+  const mon=S.incM||today().slice(0,7), rows=incLines().filter(r=>r.m===mon).map(r=>({Date:r.date,Invoice:r.inv,Salesperson:r.sp,Brand:r.brand,'Item Code':r.sku,Description:r.name,'Sale Value (excl GST)':r.val,'Rate %':r.ir,'Total Incentive':+r.tot.toFixed(2),'Sales Team Share':+r.sales.toFixed(2),'Godown Team Share':+r.god.toFixed(2)}));
+  if(!rows.length) return toast('No eligible sales this month',true); xlsxDownload(rows,'Incentive','SSPL_Incentive_'+mon+'.xlsx');
 }
 
 /* ================= STOCK ================= */
@@ -1444,12 +1498,13 @@ function editItem(b,sku){
   const i=S.idx[key(b,sku)]; if(!i) return;
   modal(`Edit ${esc(i.sku)}`, `<div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">${imgHTML(i,'thumb')}<label class="btn ghost sm">Change photo<input type="file" accept="image/*" class="hide" onchange="uploadPhoto(this,'${esc(b)}','${esc(sku).replace(/'/g,"\\'")}')"></label></div>
    <div class="fgrid"><label class="f" style="grid-column:span 2">Description<input class="in" id="e_name" value="${esc(i.name)}"></label><label class="f">Category<input class="in" id="e_cat" value="${esc(i.cat)}"></label><label class="f">GST %<input class="in" id="e_gst" type="number" value="${esc(i.gst)}"></label>
-   <label class="f">MRP<input class="in" id="e_mrp" type="number" value="${esc(i.mrp)}"></label><label class="f">SSPL Cost<input class="in" id="e_cost" type="number" value="${esc(i.cost)}"></label><label class="f">Opening Stock<input class="in" id="e_open" type="number" value="${esc(i.open)}"></label></div>
+   <label class="f">MRP<input class="in" id="e_mrp" type="number" value="${esc(i.mrp)}"></label><label class="f">SSPL Cost<input class="in" id="e_cost" type="number" value="${esc(i.cost)}"></label><label class="f">Opening Stock<input class="in" id="e_open" type="number" value="${esc(i.open)}"></label>
+   <label class="f" style="grid-column:span 2">Slow-moving item (1.50% incentive)<select class="in" id="e_slow"><option value="0">No</option><option value="1" ${i.slow?'selected':''}>Yes – identified by Rajiv</option></select></label></div>
    <div class="actions"><button class="btn gold" onclick="saveItem('${esc(b)}','${esc(sku).replace(/'/g,"\\'")}')">Save</button></div>`);
 }
 async function saveItem(b,sku){
-  const p={brand:b,sku,name:$('#e_name').value,cat:$('#e_cat').value,gst:+$('#e_gst').value,mrp:+$('#e_mrp').value,cost:+$('#e_cost').value,open:+$('#e_open').value,admin:adminPass()};
-  try{ busy(true); await API.call('updateItem',p); Object.assign(S.idx[key(b,sku)],{name:p.name,cat:p.cat,gst:p.gst,mrp:p.mrp,cost:p.cost,open:p.open}); rebuild(); closeModal(); render(); toast('Item updated'); }catch(e){ toast(e.message,true);} finally{busy(false);}
+  const p={brand:b,sku,name:$('#e_name').value,cat:$('#e_cat').value,gst:+$('#e_gst').value,mrp:+$('#e_mrp').value,cost:+$('#e_cost').value,open:+$('#e_open').value,slow:+$('#e_slow').value,admin:adminPass()};
+  try{ busy(true); await API.call('updateItem',p); Object.assign(S.idx[key(b,sku)],{name:p.name,cat:p.cat,gst:p.gst,mrp:p.mrp,cost:p.cost,open:p.open,slow:p.slow}); rebuild(); closeModal(); render(); toast('Item updated'); }catch(e){ toast(e.message,true);} finally{busy(false);}
 }
 function compress(file, max=900){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ const im=new Image(); im.onload=()=>{ const sc=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=im.width*sc; c.height=im.height*sc; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.82)); }; im.onerror=rej; im.src=r.result; }; r.onerror=rej; r.readAsDataURL(file); }); }
 async function uploadPhoto(inp,b,sku){
@@ -2225,7 +2280,7 @@ function saleLines(){
   const s=S.sale, el=$('#s_lines'); if(!el) return;
   if(!s.lines.length){ el.innerHTML=`<div class="card empty">${s.type==='Client'?'Select a client order above – its items lying in the warehouse appear here':'Search above and add the items being sold'}</div>`; return; }
   const tq=s.lines.reduce((a,l)=>a+l.qty,0);
-  el.innerHTML=`<div class="card"><h2 class="sec">Items going out</h2>${s.lines.map((l,n)=>`<div class="ci">${imgHTML(S.idx[key(l.brand,l.sku)])}<div><div class="iname" style="font-size:13px">${esc(l.name)}</div><span class="tag">${esc(l.brand)}</span> <span class="sku">${esc(l.sku)}</span><div class="muted" style="font-size:11.5px">${s.type==='Client'?'Lying in warehouse for this order':'Free stock'}: <b>${nf(l.max)}</b></div></div><div class="qty"><button onclick="saleQty(${n},${l.qty-1})">−</button><input value="${l.qty}" inputmode="numeric" onchange="saleQty(${n},this.value)"><button onclick="saleQty(${n},${l.qty+1})">+</button></div></div>`).join('')}<div class="tot"><span>${s.lines.length} item${s.lines.length>1?'s':''}</span><span>${nf(tq)} qty out</span></div></div>`;
+  el.innerHTML=`<div class="card"><h2 class="sec">Items going out</h2>${s.lines.map((l,n)=>`<div class="ci">${imgHTML(S.idx[key(l.brand,l.sku)])}<div><div class="iname" style="font-size:13px">${esc(l.name)}</div><span class="tag">${esc(l.brand)}</span> <span class="sku">${esc(l.sku)}</span><div class="muted" style="font-size:11.5px">${s.type==='Client'?'Lying in warehouse for this order':'Free stock'}: <b>${nf(l.max)}</b></div>${s.type==='Stock'?`<div style="margin-top:5px"><input class="in" style="max-width:200px;padding:6px 8px" inputmode="decimal" placeholder="Sale value excl GST ₹" value="${l.val||''}" onchange="S.sale.lines[${n}].val=parseFloat(this.value)||0"></div>`:''}</div><div class="qty"><button onclick="saleQty(${n},${l.qty-1})">−</button><input value="${l.qty}" inputmode="numeric" onchange="saleQty(${n},this.value)"><button onclick="saleQty(${n},${l.qty+1})">+</button></div></div>`).join('')}<div class="tot"><span>${s.lines.length} item${s.lines.length>1?'s':''}</span><span>${nf(tq)} qty out</span></div></div>`;
 }
 async function saveSale(){
   const s=S.sale;
@@ -2243,8 +2298,9 @@ async function saveSale(){
     else { const st=S.stock[k]; mx=st?Math.max(0,Math.min(freeQty(st,s.loc),st.close-st.hold-(st.book||0))):0; }
     if(s.type==='Client'){ const lq=locQty(S.stock[k],s.loc); if(l.qty>lq) return toast(l.sku+': only '+lq+' at '+s.loc+' - transfer stock there or change the location',true); }
     if(l.qty>mx) return toast(l.sku+': only '+mx+' available now – please adjust',true); }
+  if(s.type==='Stock'){ const miss=s.lines.filter(l=>incRate('Stock',l)>0&&!(+l.val>0)); if(miss.length && !confirm('No sale value (excl GST) entered for '+miss.map(l=>l.sku).join(', ')+'.\nIncentive will NOT be counted for these items. Record anyway?')) return; }
   const sale={loc:s.loc,date:s.date,type:s.type,client:s.type==='Client'?s.client:(s.client||'').trim(),poNo:s.type==='Client'?s.poNo:'',sp:s.sp,billFrom:s.billFrom,inv:s.inv,ref:s.inv,remarks:(s.remarks||'').trim(),by:S.user,
-    lines:s.lines.map(l=>({brand:l.brand,sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,mrp:l.mrp,poNo:l.poNo||''}))};
+    lines:s.lines.map(l=>({brand:l.brand,sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,mrp:l.mrp,poNo:l.poNo||'',val:s.type==='Stock'?(+l.val||0):0,ir:incRate(s.type,l)}))};
   try{ busy(true,'Recording sale…'); const r=await API.call('createSale',{sale}); saleReset(); await refresh(true); S.saleTab='log'; vSale(); toast('Sale '+r.no+' recorded – stock updated'); viewSale(r.no); }
   catch(e){ toast(e.message,true); } finally{ busy(false); }
 }
