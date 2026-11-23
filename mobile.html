@@ -759,6 +759,29 @@ body.mobile .tab.on svg{background:var(--blk);color:#fff;stroke:#fff}
 body.mobile table.t.cards tr{border-radius:18px;margin:8px;box-shadow:var(--sh);border-bottom:0}
 html[data-view=mobile] body{box-shadow:none}
 }
+
+/* ===== UI polish v2 (easier use: bigger touch targets, cleaner header, readable tables) ===== */
+a{color:var(--navy2)}
+.login .card a{color:var(--navy2);font-weight:700}
+body.mobile .brand-head{padding:8px 10px 6px}
+body.mobile .brand-marks{gap:6px}
+body.mobile .brand-marks img{height:30px;padding:4px 7px;border-radius:10px;box-shadow:0 1px 6px rgba(16,16,24,.12)}
+body.mobile .brand-sub{display:none}
+body.mobile .brand-title{font-size:10.5px;letter-spacing:.6px}
+body.mobile input.in,body.mobile select.in,body.mobile textarea.in{font-size:16px;min-height:46px}
+body.mobile .btn{min-height:44px;font-size:14.5px}
+body.mobile .btn.sm{min-height:38px}
+body.mobile .tabs button,body.mobile .tabs a{min-height:56px}
+body.mobile .card{border-radius:16px}
+.btn{transition:transform .08s,box-shadow .15s}
+.btn:active{transform:scale(.97)}
+table.t tbody tr:hover td{background:#F3F6FB}
+table.t thead th{position:sticky;top:0;background:#fff;z-index:1}
+.tscroll{max-height:72vh;overflow:auto;border-radius:12px}
+.toast{border-radius:12px;font-weight:600}
+.modal .mbox{border-radius:18px}
+body.mobile .modal{padding:0;align-items:flex-end}
+body.mobile .modal .mbox{width:100%;max-width:none;border-radius:20px 20px 0 0;max-height:92vh;overflow:auto}
 </style>
 </head>
 <body>
