@@ -791,7 +791,7 @@ body.mobile #sq{position:sticky;top:6px;z-index:15}
 body.mobile .bar select.in{flex:1 1 calc(50% - 6px);min-width:0}
 body.mobile .bar .btn{flex:1 1 calc(50% - 6px)}
 
-body::after{content:"Build 26-Nov 11:55";position:fixed;left:8px;bottom:2px;font-size:9px;color:#9aa3af;z-index:5;pointer-events:none}
+body::after{content:"Build 26-Nov 12:20";position:fixed;left:8px;bottom:2px;font-size:9px;color:#9aa3af;z-index:5;pointer-events:none}
 body.mobile::after{bottom:78px}
 </style>
 </head>
@@ -1365,7 +1365,13 @@ function vHome(){
 
 /* ===== Incentive scheme (Sales & Godown teams) ===== */
 const INC_JQ=0.25, INC_SLOW=1.5;
-function incRate(type,l){ if(type!=='Stock') return 0; const it=S.idx[key(l.brand,l.sku)]||{}; return it.slow?INC_SLOW:(String(l.brand).toUpperCase()==='JAQUAR'?INC_JQ:0); }
+function incBase(l){ const it=S.idx[key(l.brand,l.sku)]||{}; return it.slow?INC_SLOW:(String(l.brand).toUpperCase()==='JAQUAR'?INC_JQ:0); }
+/* Incentive applies ONLY to units from opening stock (open at default location, openB at Boragaon). GRN-received stock is never eligible. */
+function incPool(l,loc){ const it=S.idx[key(l.brand,l.sku)]||{}; const opening=(loc===bgLoc()?(+it.openB||0):0)+(loc===openLoc()?(+it.open||0):0); const k=key(l.brand,l.sku); let used=0;
+  liveSales().forEach(x=>{ if(x.type!=='Stock'||(x.loc||openLoc())!==loc) return; (x.lines||[]).forEach(y=>{ if(key(y.brand,y.sku)!==k) return; used+= (y.eq!=null?(+y.eq||0):((+y.ir||0)>0?(+y.qty||0):0)); }); });
+  return Math.max(0,opening-used); }
+function incCalc(type,l,loc,took){ if(type!=='Stock') return {ir:0,eq:0}; const b=incBase(l), q=+l.qty||0; if(!b||q<=0) return {ir:0,eq:0}; const k=key(l.brand,l.sku); const pool=Math.max(0,incPool(l,loc)-((took&&took[k])||0)); const eq=Math.min(q,pool); if(took) took[k]=((took[k])||0)+eq; return {ir:+(b*eq/q).toFixed(4),eq}; }
+function incRate(type,l,loc){ return incCalc(type,l,loc).ir; }
 function incLines(){
   const out=[]; liveSales().forEach(x=>{ if(x.type!=='Stock') return; (x.lines||[]).forEach(l=>{ const ir=+l.ir||0, v=+l.val||0; if(ir>0&&v>0) out.push({m:String(x.date).slice(0,7),date:x.date,no:x.no,inv:x.inv||'',client:x.client||'',sp:x.sp||x.by||'',brand:l.brand,sku:l.sku,name:l.name,val:v,ir,tot:v*ir/100,sales:v*ir/200,god:v*ir/200}); }); });
   return out;
@@ -1381,9 +1387,9 @@ function vIncentive(){
   const scheme=`<div class="card" style="margin-bottom:16px"><h2 class="sec">Incentive scheme – Sales &amp; Godown teams</h2>
    <div class="note" style="margin-bottom:10px">Incentive is calculated on eligible sales value <b>excluding GST</b>.</div>
    <div class="tscroll"><table class="t"><thead><tr><th>Eligible sales</th><th class="num">Total</th><th class="num">Sales team</th><th class="num">Godown team</th></tr></thead><tbody>
-    <tr><td>Jaquar and Parryware items from existing warehouse stock</td><td class="num"><b>0.25%</b></td><td class="num">0.125%</td><td class="num">0.125%</td></tr>
+    <tr><td>Jaquar and Parryware items sold from opening stock</td><td class="num"><b>0.25%</b></td><td class="num">0.125%</td><td class="num">0.125%</td></tr>
     <tr><td>Slow-moving CP fittings and sanitaryware identified by Rajiv</td><td class="num"><b>1.50%</b></td><td class="num">0.75%</td><td class="num">0.75%</td></tr></tbody></table></div>
-   <div style="margin-top:12px;font-size:13px;line-height:1.55"><b>Eligibility</b><br>Jaquar and Parryware qualify only when sold from our existing warehouse stock. Items procured from HMC or any other vendor to fulfil a sale are ineligible.<br>For Kohler, Grohe, Colston and similar brands, only the specific slow-moving items identified by Rajiv qualify for the 1.50% incentive.</div>
+   <div style="margin-top:12px;font-size:13px;line-height:1.55"><b>Eligibility</b><br>Incentive applies <b>only to opening stock</b> (stock added through opening / warehouse stock import). Anything received through a GRN is <b>not</b> eligible, even for Jaquar, Parryware or slow-moving items. Items procured from HMC or any other vendor to fulfil a sale are ineligible. Once the opening-stock quantity of an item at a location is sold, further sales of it earn no incentive.<br>For Kohler, Grohe, Colston and similar brands, only the specific slow-moving items identified by Rajiv qualify for the 1.50% incentive.</div>
    <div class="muted" style="margin-top:10px;font-size:12.5px"><b>Examples:</b> ₹1,00,000 Jaquar/Parryware stock sales = ₹250 (Sales ₹125 + Godown ₹125). ₹1,00,000 eligible slow-moving sales = ₹1,500 (Sales ₹750 + Godown ₹750).</div></div>`;
   const msel=`<div class="bar"><select class="in" onchange="S.incM=this.value;vIncentive()">${months.map(m=>`<option value="${m}" ${m===mon?'selected':''}>${mlbl(m)}</option>`).join('')}</select>${adm?`<button class="btn ghost" onclick="incExport()">⬇ Excel</button>`:''}</div>`;
   let body='';
@@ -2320,9 +2326,10 @@ async function saveSale(){
     else { const st=S.stock[k]; mx=st?Math.max(0,Math.min(freeQty(st,s.loc),st.close-st.hold-(st.book||0))):0; }
     if(s.type==='Client'){ const lq=locQty(S.stock[k],s.loc); if(l.qty>lq) return toast(l.sku+': only '+lq+' at '+s.loc+' - transfer stock there or change the location',true); }
     if(l.qty>mx) return toast(l.sku+': only '+mx+' available now – please adjust',true); }
-  if(s.type==='Stock'){ const miss=s.lines.filter(l=>incRate('Stock',l)>0&&!(+l.val>0)); if(miss.length && !confirm('No sale value (excl GST) entered for '+miss.map(l=>l.sku).join(', ')+'.\nIncentive will NOT be counted for these items. Record anyway?')) return; }
+  if(s.type==='Stock'){ const miss=s.lines.filter(l=>incRate('Stock',l,s.loc)>0&&!(+l.val>0)); if(miss.length && !confirm('No sale value (excl GST) entered for '+miss.map(l=>l.sku).join(', ')+'.\nIncentive will NOT be counted for these items. Record anyway?')) return; }
+  const took={};
   const sale={loc:s.loc,date:s.date,type:s.type,client:s.type==='Client'?s.client:(s.client||'').trim(),poNo:s.type==='Client'?s.poNo:'',sp:s.sp,billFrom:s.billFrom,inv:s.inv,ref:s.inv,remarks:(s.remarks||'').trim(),by:S.user,
-    lines:s.lines.map(l=>({brand:l.brand,sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,mrp:l.mrp,poNo:l.poNo||'',val:s.type==='Stock'?(+l.val||0):0,ir:incRate(s.type,l)}))};
+    lines:s.lines.map(l=>{ const c=incCalc(s.type,l,s.loc,took); return {brand:l.brand,sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,mrp:l.mrp,poNo:l.poNo||'',val:s.type==='Stock'?(+l.val||0):0,ir:c.ir,eq:c.eq}; })};
   try{ busy(true,'Recording sale…'); const r=await API.call('createSale',{sale}); saleReset(); await refresh(true); S.saleTab='log'; vSale(); toast('Sale '+r.no+' recorded – stock updated'); viewSale(r.no); }
   catch(e){ toast(e.message,true); } finally{ busy(false); }
 }
