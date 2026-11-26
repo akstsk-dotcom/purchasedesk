@@ -791,7 +791,7 @@ body.mobile #sq{position:sticky;top:6px;z-index:15}
 body.mobile .bar select.in{flex:1 1 calc(50% - 6px);min-width:0}
 body.mobile .bar .btn{flex:1 1 calc(50% - 6px)}
 
-body::after{content:"Build 26-Nov 11:45";position:fixed;left:8px;bottom:2px;font-size:9px;color:#9aa3af;z-index:5;pointer-events:none}
+body::after{content:"Build 26-Nov 11:55";position:fixed;left:8px;bottom:2px;font-size:9px;color:#9aa3af;z-index:5;pointer-events:none}
 body.mobile::after{bottom:78px}
 </style>
 </head>
@@ -826,7 +826,7 @@ body.mobile::after{bottom:78px}
 /* ================= CONFIG ================= */
 const CONFIG = {
   API_URL: '',            // paste Apps Script Web App URL here (or set it in Admin → Settings)
-  BRANDS: ['JAQUAR','GROHE','KOHLER','ROCA','VILLEROY & BOCH','OTHERS'],
+  BRANDS: ['JAQUAR','GROHE','KOHLER','ROCA','VILLEROY & BOCH','COLSTON','OTHERS'],
   ADMIN_PASS_DEMO: '8943' // demo mode only; live mode password lives in Script Properties
 };
 const ICON = {
@@ -895,7 +895,7 @@ const MASTER = {"v":"Jaquar 15-Sep-26 + Vertis 2026 · Kohler 01-Aug-26 · Grohe
 const S7='https://s7g10.scene7.com/is/image/kohlerindia/';
 let _masterObjs=null;
 const OPEN_QTY = {"SPT-CHR-41463":1,"ONY-CHR-59741":1,"EPD-CHR-65433":1,"KAV-CHR-49011B":1,"QUA-CHR-61753":1,"ONY-CHR-59757":1,"TIA-CHR-73011B":1,"CNF-CHR-69233K":1,"BSA-CHR-70071":4,"LEO-CHR-55233K":1,"SAA-CHR-507566S":2,"LEO-CHR-45053":3,"SAA-CHR-50754":1,"CUBEX T-PILLAR COCK / TALL BASIN MIXER":1,"CONTE OH SHOWER 493":1,"AO SMITH GEYSER 15LT":1,"AN25 LUX 2KW IV":1,"AO SMITH URBAN GEYSER 6LTR (WH)":4,"AO SMITH URBAN GEYSER 15LTR (WH)":2,"FERROLI GEYSER 25LTR HORIZONTAL":1,"FERROLI GEYSER 15LTR HORIZONTAL":1}; /* count 15/11/26 – stock at Boragaon */
-(function(){ const B=MASTER.brands; if(B.indexOf('VILLEROY & BOCH')<0) B.push('VILLEROY & BOCH'); if(B.indexOf('OTHERS')<0) B.push('OTHERS'); })();
+(function(){ const B=MASTER.brands; if(B.indexOf('VILLEROY & BOCH')<0) B.push('VILLEROY & BOCH'); if(B.indexOf('COLSTON')<0) B.push('COLSTON'); if(B.indexOf('OTHERS')<0) B.push('OTHERS'); })();
 const BORAGAON_QTY = {"JCP-CHR-152415":2,"JCP-CHR-2415":28,"JCP-CHR-812415":2,"ALD-CHR-079N":1,"ALD-CHR-233N":7,"ALD-CHR-573":49,"ALD-CHR-705":41,"ALD-CHR-705L130":11,"ALD-CHR-807B":7,"AQT-CHR-3057":51,"SPJ-CHR-15429PM":7,"SPJ-CHR-35463PM":8,"ACN-CHR-1111SM":36,"ACN-CHR-1121N":30,"ACN-CHR-1173":36,"ACN-CHR-1195N":19,"COP-CHR-049NPM":1,"COP-CHR-107NPM":1,"FLP-CHR-5053PM":184,"FLP-CHR-5001BPM":36,"FLP-CHR-5011PM":2,"FLP-CHR-5273PM":36,"FLP-CHR-5309PM":2,"KUP-CHR-35053PM":33,"KUP-CHR-35079NKPM":8,"OHS-CHR-1661":36,"SHA-CHR-479L600":8,"SHA-CHR-483":26,"SHA-CHR-549D8":8,"SHP-BLK-ST86112":1,"SHP-SSF-ST8896":1,"SHP-WHT-ST86113":1,"ARS-WHT-39901":1,"ARS-WHT-39951UFSM":1,"ARS-WHT-39953BIUFSM":1,"ITS-WHT-89851S300PP":2,"CNS-WHT-301":1,"CNS-WHT-305":3,"CNS-WHT-353SPPZ":2,"CNS-WHT-551SNPP184LZ":2,"CNS-WHT-551SSPP":11,"CNS-WHT-701":2,"CNS-WHT-705":1,"CNS-WHT-811":1,"CNS-WHT-853P180SPPSM":10,"CNS-WHT-963SPP":35,"FLS-WHT-5801":1,"FLS-WHT-5935":1,"FNS-WHT-40305":1,"FNS-WHT-40931":4,"JDS-BLM-25907N":1,"JDS-BLM-25911":1,"JDS-WHT-25909":1,"KUS-WHT-35953BIUFSMPM":4,"KUS-WHT-35935":2,"KUS-WHT-35953BIUFSM":1,"LAS-BLM-91953BIUF":1,"LAS-GRM-91703":3,"LAS-GRM-91953BIUF":2,"LAS-WHT-91905":1,"LYS-WHT-38801":34,"LYS-WHT-38851S220UFSMN":3,"LYS-WHT-38853S220UFSMY":2,"OPS-WHT-15931PM":1,"OPS-WHT-15901N":1,"SLS-WHT-6301":4,"SLS-WHT-6305":4,"SLS-WHT-6601":10,"SLS-WHT-6851S300PP":3,"SLS-WHT-6851SB":1,"SLS-WHT-6905":1,"SLS-WHT-6953BIPPSMN":2,"URS-WHT-13253N":3,"URS-WHT-13257":1,"URS-WHT-13261":3,"URS-WHT-13267":1,"VGS-WHT-81953UF":1}; /* Boragaon warehouse count 22/11/26 (qty only) */
 function masterItems(){ // fresh objects every call
   return MASTER.items.map(r=>({brand:MASTER.brands[r[0]],sku:r[1],name:r[2],cat:r[3],mrp:+r[4]||0,cost:0,gst:+r[5]||0,img:r[6]?(r[6][0]==='~'?S7+r[6].slice(1):r[6]):'',open:0,openB:(BORAGAON_QTY[String(r[1]).toUpperCase()]||0)+(OPEN_QTY[String(r[1]).toUpperCase()]||0),disc:r[7]||'',alt:r[8]||''}));
